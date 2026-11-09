@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "concurrently -k -n api,web \"node --watch --no-warnings server/index.js\" \"vite\"",
     "build": "vite build",
-    "start": "NODE_ENV=production node --no-warnings server/index.js",
-    "test": "node --no-warnings tests/e2e.mjs"
+    "start": "node --no-warnings server/index.js",
+    "test": "node --no-warnings tests/e2e.mjs",
+    "start:prod": "node --no-warnings --env-file-if-exists=.env server/index.js"
   },
   "keywords": [],
   "author": "",
