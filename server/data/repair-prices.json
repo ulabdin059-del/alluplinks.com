@@ -1,0 +1,860 @@
+{
+ "Phone": {
+  "Apple": {
+   "iPhone 18 Pro Max": {
+    "screen": 499,
+    "battery": 179,
+    "port": 199,
+    "back": 219,
+    "camera": 269
+   },
+   "iPhone 18 Pro": {
+    "screen": 459,
+    "battery": 169,
+    "port": 179,
+    "back": 209,
+    "camera": 249
+   },
+   "iPhone 17 Pro Max": {
+    "screen": 459,
+    "battery": 169,
+    "port": 179,
+    "back": 209,
+    "camera": 249
+   },
+   "iPhone 17 Pro": {
+    "screen": 429,
+    "battery": 139,
+    "port": 159,
+    "back": 179,
+    "camera": 259
+   },
+   "iPhone Air": {
+    "screen": 379,
+    "battery": 139,
+    "port": 149,
+    "back": 169,
+    "camera": 209
+   },
+   "iPhone 17": {
+    "screen": 319,
+    "battery": 129,
+    "port": 149,
+    "back": 149,
+    "camera": 199
+   },
+   "iPhone 17e": {
+    "screen": 249,
+    "battery": 89,
+    "port": 99,
+    "back": 109,
+    "camera": 139
+   },
+   "iPhone 16 Pro Max": {
+    "screen": 429,
+    "battery": 149,
+    "port": 169,
+    "back": 189,
+    "camera": 239
+   },
+   "iPhone 16 Pro": {
+    "screen": 399,
+    "battery": 129,
+    "port": 149,
+    "back": 169,
+    "camera": 239
+   },
+   "iPhone 16 Plus": {
+    "screen": 319,
+    "battery": 109,
+    "port": 129,
+    "back": 139,
+    "camera": 179
+   },
+   "iPhone 16": {
+    "screen": 289,
+    "battery": 119,
+    "port": 139,
+    "back": 139,
+    "camera": 189
+   },
+   "iPhone 16e": {
+    "screen": 229,
+    "battery": 79,
+    "port": 89,
+    "back": 99,
+    "camera": 129
+   },
+   "iPhone 15 Pro Max": {
+    "screen": 379,
+    "battery": 139,
+    "port": 149,
+    "back": 169,
+    "camera": 209
+   },
+   "iPhone 15 Pro": {
+    "screen": 349,
+    "battery": 119,
+    "port": 139,
+    "back": 149,
+    "camera": 219
+   },
+   "iPhone 15 Plus": {
+    "screen": 289,
+    "battery": 99,
+    "port": 119,
+    "back": 129,
+    "camera": 159
+   },
+   "iPhone 15": {
+    "screen": 259,
+    "battery": 109,
+    "port": 129,
+    "back": 129,
+    "camera": 169
+   },
+   "iPhone 14 Pro Max": {
+    "screen": 329,
+    "battery": 119,
+    "port": 129,
+    "back": 149,
+    "camera": 179
+   },
+   "iPhone 14 Pro": {
+    "screen": 299,
+    "battery": 109,
+    "port": 129,
+    "back": 139,
+    "camera": 189
+   },
+   "iPhone 14 Plus": {
+    "screen": 249,
+    "battery": 89,
+    "port": 99,
+    "back": 109,
+    "camera": 139
+   },
+   "iPhone 14": {
+    "screen": 229,
+    "battery": 99,
+    "port": 119,
+    "back": 119,
+    "camera": 149
+   },
+   "iPhone 13 Pro Max": {
+    "screen": 289,
+    "battery": 99,
+    "port": 119,
+    "back": 129,
+    "camera": 159
+   },
+   "iPhone 13 Pro": {
+    "screen": 259,
+    "battery": 99,
+    "port": 119,
+    "back": 149,
+    "camera": 169
+   },
+   "iPhone 13": {
+    "screen": 199,
+    "battery": 99,
+    "port": 109,
+    "back": 139,
+    "camera": 139
+   },
+   "iPhone 13 mini": {
+    "screen": 189,
+    "battery": 79,
+    "port": 89,
+    "back": 89,
+    "camera": 99
+   },
+   "iPhone 12 Pro Max": {
+    "screen": 229,
+    "battery": 79,
+    "port": 89,
+    "back": 99,
+    "camera": 129
+   },
+   "iPhone 12 Pro": {
+    "screen": 199,
+    "battery": 89,
+    "port": 109,
+    "back": 139,
+    "camera": 149
+   },
+   "iPhone 12": {
+    "screen": 179,
+    "battery": 89,
+    "port": 99,
+    "back": 129,
+    "camera": 119
+   },
+   "iPhone 12 mini": {
+    "screen": 169,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone SE (3rd gen)": {
+    "screen": 99,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone SE (2nd gen)": {
+    "screen": 89,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone 11 Pro Max": {
+    "screen": 189,
+    "battery": 79,
+    "port": 89,
+    "back": 89,
+    "camera": 99
+   },
+   "iPhone 11 Pro": {
+    "screen": 169,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone 11": {
+    "screen": 129,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone XS Max": {
+    "screen": 149,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone XS": {
+    "screen": 129,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone XR": {
+    "screen": 109,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone X": {
+    "screen": 119,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone 8 Plus": {
+    "screen": 89,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "iPhone 8": {
+    "screen": 79,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   }
+  },
+  "Samsung": {
+   "Galaxy S26 Ultra": {
+    "screen": 409,
+    "battery": 149,
+    "port": 159,
+    "back": 179,
+    "camera": 219
+   },
+   "Galaxy S26+": {
+    "screen": 339,
+    "battery": 119,
+    "port": 139,
+    "back": 149,
+    "camera": 189
+   },
+   "Galaxy S26": {
+    "screen": 299,
+    "battery": 109,
+    "port": 119,
+    "back": 129,
+    "camera": 159
+   },
+   "Galaxy Z Fold8 Ultra": {
+    "screen": 699,
+    "battery": 209,
+    "port": 209,
+    "back": 309,
+    "camera": 379
+   },
+   "Galaxy Z Fold8": {
+    "screen": 649,
+    "battery": 189,
+    "port": 189,
+    "back": 289,
+    "camera": 359
+   },
+   "Galaxy Z Flip8": {
+    "screen": 449,
+    "battery": 129,
+    "port": 129,
+    "back": 199,
+    "camera": 249
+   },
+   "Galaxy S25 Ultra": {
+    "screen": 389,
+    "battery": 129,
+    "port": 139,
+    "back": 129,
+    "camera": 239
+   },
+   "Galaxy S25 Edge": {
+    "screen": 349,
+    "battery": 129,
+    "port": 139,
+    "back": 159,
+    "camera": 189
+   },
+   "Galaxy S25+": {
+    "screen": 319,
+    "battery": 109,
+    "port": 129,
+    "back": 139,
+    "camera": 179
+   },
+   "Galaxy S25": {
+    "screen": 289,
+    "battery": 119,
+    "port": 129,
+    "back": 119,
+    "camera": 159
+   },
+   "Galaxy S25 FE": {
+    "screen": 229,
+    "battery": 79,
+    "port": 89,
+    "back": 99,
+    "camera": 129
+   },
+   "Galaxy Z Fold7": {
+    "screen": 649,
+    "battery": 189,
+    "port": 189,
+    "back": 289,
+    "camera": 359
+   },
+   "Galaxy Z Flip7": {
+    "screen": 429,
+    "battery": 129,
+    "port": 129,
+    "back": 189,
+    "camera": 239
+   },
+   "Galaxy Z Flip7 FE": {
+    "screen": 379,
+    "battery": 109,
+    "port": 109,
+    "back": 169,
+    "camera": 209
+   },
+   "Galaxy S24 Ultra": {
+    "screen": 369,
+    "battery": 119,
+    "port": 129,
+    "back": 119,
+    "camera": 219
+   },
+   "Galaxy S24+": {
+    "screen": 299,
+    "battery": 109,
+    "port": 119,
+    "back": 129,
+    "camera": 159
+   },
+   "Galaxy S24": {
+    "screen": 269,
+    "battery": 109,
+    "port": 119,
+    "back": 109,
+    "camera": 149
+   },
+   "Galaxy S24 FE": {
+    "screen": 219,
+    "battery": 79,
+    "port": 89,
+    "back": 99,
+    "camera": 119
+   },
+   "Galaxy Z Fold6": {
+    "screen": 599,
+    "battery": 179,
+    "port": 179,
+    "back": 269,
+    "camera": 329
+   },
+   "Galaxy Z Flip6": {
+    "screen": 399,
+    "battery": 119,
+    "port": 119,
+    "back": 179,
+    "camera": 219
+   },
+   "Galaxy S23 Ultra": {
+    "screen": 339,
+    "battery": 109,
+    "port": 119,
+    "back": 109,
+    "camera": 199
+   },
+   "Galaxy S23+": {
+    "screen": 279,
+    "battery": 99,
+    "port": 109,
+    "back": 129,
+    "camera": 149
+   },
+   "Galaxy S23": {
+    "screen": 249,
+    "battery": 99,
+    "port": 109,
+    "back": 99,
+    "camera": 139
+   },
+   "Galaxy S23 FE": {
+    "screen": 199,
+    "battery": 79,
+    "port": 89,
+    "back": 89,
+    "camera": 109
+   },
+   "Galaxy Z Fold5": {
+    "screen": 549,
+    "battery": 159,
+    "port": 159,
+    "back": 249,
+    "camera": 299
+   },
+   "Galaxy Z Flip5": {
+    "screen": 379,
+    "battery": 109,
+    "port": 109,
+    "back": 169,
+    "camera": 209
+   },
+   "Galaxy S22 Ultra": {
+    "screen": 319,
+    "battery": 99,
+    "port": 109,
+    "back": 99,
+    "camera": 179
+   },
+   "Galaxy S22+": {
+    "screen": 259,
+    "battery": 89,
+    "port": 99,
+    "back": 119,
+    "camera": 139
+   },
+   "Galaxy S22": {
+    "screen": 229,
+    "battery": 89,
+    "port": 99,
+    "back": 89,
+    "camera": 129
+   },
+   "Galaxy Z Fold4": {
+    "screen": 499,
+    "battery": 149,
+    "port": 149,
+    "back": 219,
+    "camera": 269
+   },
+   "Galaxy Z Flip4": {
+    "screen": 349,
+    "battery": 99,
+    "port": 99,
+    "back": 159,
+    "camera": 189
+   },
+   "Galaxy S21 Ultra": {
+    "screen": 299,
+    "battery": 99,
+    "port": 109,
+    "back": 99,
+    "camera": 169
+   },
+   "Galaxy S21+": {
+    "screen": 249,
+    "battery": 89,
+    "port": 99,
+    "back": 109,
+    "camera": 139
+   },
+   "Galaxy S21": {
+    "screen": 219,
+    "battery": 89,
+    "port": 99,
+    "back": 89,
+    "camera": 119
+   },
+   "Galaxy S21 FE": {
+    "screen": 179,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 99
+   },
+   "Galaxy Z Fold3": {
+    "screen": 449,
+    "battery": 129,
+    "port": 129,
+    "back": 199,
+    "camera": 249
+   },
+   "Galaxy Z Flip3": {
+    "screen": 299,
+    "battery": 89,
+    "port": 89,
+    "back": 129,
+    "camera": 159
+   },
+   "Galaxy S20 Ultra": {
+    "screen": 279,
+    "battery": 99,
+    "port": 109,
+    "back": 129,
+    "camera": 149
+   },
+   "Galaxy S20+": {
+    "screen": 239,
+    "battery": 89,
+    "port": 99,
+    "back": 109,
+    "camera": 129
+   },
+   "Galaxy S20": {
+    "screen": 219,
+    "battery": 79,
+    "port": 89,
+    "back": 99,
+    "camera": 119
+   },
+   "Galaxy S20 FE": {
+    "screen": 169,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy Note20 Ultra": {
+    "screen": 299,
+    "battery": 109,
+    "port": 119,
+    "back": 129,
+    "camera": 159
+   },
+   "Galaxy Note20": {
+    "screen": 239,
+    "battery": 89,
+    "port": 99,
+    "back": 109,
+    "camera": 129
+   },
+   "Galaxy Note10+": {
+    "screen": 249,
+    "battery": 89,
+    "port": 99,
+    "back": 109,
+    "camera": 139
+   },
+   "Galaxy Note10": {
+    "screen": 219,
+    "battery": 79,
+    "port": 89,
+    "back": 99,
+    "camera": 119
+   },
+   "Galaxy A56": {
+    "screen": 169,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A36": {
+    "screen": 149,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A26": {
+    "screen": 129,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A16": {
+    "screen": 109,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A55": {
+    "screen": 159,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A35": {
+    "screen": 139,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A25": {
+    "screen": 119,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A15": {
+    "screen": 99,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A54": {
+    "screen": 149,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A53": {
+    "screen": 139,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A14": {
+    "screen": 89,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   },
+   "Galaxy A13": {
+    "screen": 89,
+    "battery": 79,
+    "port": 89,
+    "back": 79,
+    "camera": 89
+   }
+  },
+  "Google": {
+   "Pixel 7": {
+    "screen": 179,
+    "battery": 89,
+    "port": 99,
+    "back": 99,
+    "camera": 119
+   },
+   "Pixel 8": {
+    "screen": 199,
+    "battery": 99,
+    "port": 109,
+    "back": 109,
+    "camera": 139
+   },
+   "Pixel 8 Pro": {
+    "screen": 259,
+    "battery": 99,
+    "port": 119,
+    "back": 119,
+    "camera": 169
+   },
+   "Pixel 9": {
+    "screen": 229,
+    "battery": 109,
+    "port": 119,
+    "back": 119,
+    "camera": 149
+   },
+   "Pixel 9 Pro": {
+    "screen": 289,
+    "battery": 109,
+    "port": 129,
+    "back": 129,
+    "camera": 189
+   }
+  },
+  "Other": {}
+ },
+ "Tablet": {
+  "Apple": {
+   "iPad (9th gen)": {
+    "screen": 129,
+    "battery": 99,
+    "port": 89
+   },
+   "iPad (10th gen)": {
+    "screen": 169,
+    "battery": 109,
+    "port": 99
+   },
+   "iPad Air (M2)": {
+    "screen": 279,
+    "battery": 129,
+    "port": 109
+   },
+   "iPad Pro 11\" (M4)": {
+    "screen": 449,
+    "battery": 149,
+    "port": 129
+   }
+  },
+  "Samsung": {
+   "Galaxy Tab A9": {
+    "screen": 119,
+    "battery": 89,
+    "port": 79
+   },
+   "Galaxy Tab S9": {
+    "screen": 299,
+    "battery": 119,
+    "port": 99
+   }
+  },
+  "Other": {}
+ },
+ "Laptop": {
+  "Apple": {
+   "MacBook Air (M1)": {
+    "screen": 449,
+    "battery": 169,
+    "keyboard": 249,
+    "port": 149
+   },
+   "MacBook Air (M2/M3)": {
+    "screen": 549,
+    "battery": 189,
+    "keyboard": 279,
+    "port": 169
+   },
+   "MacBook Pro 14\"": {
+    "screen": 699,
+    "battery": 229,
+    "keyboard": 329,
+    "port": 189
+   }
+  },
+  "Dell": {
+   "Inspiron / Latitude": {
+    "screen": 189,
+    "battery": 129,
+    "keyboard": 119,
+    "port": 99
+   },
+   "XPS": {
+    "screen": 349,
+    "battery": 159,
+    "keyboard": 169,
+    "port": 129
+   }
+  },
+  "HP": {
+   "Pavilion / ProBook": {
+    "screen": 179,
+    "battery": 119,
+    "keyboard": 109,
+    "port": 99
+   }
+  },
+  "Lenovo": {
+   "IdeaPad / ThinkPad": {
+    "screen": 179,
+    "battery": 119,
+    "keyboard": 109,
+    "port": 99
+   }
+  },
+  "Other": {}
+ },
+ "Console": {
+  "PlayStation": {
+   "PS5": {
+    "hdmi": 149,
+    "overheat": 79,
+    "drift": 59,
+    "disc": 129
+   },
+   "PS4 / PS4 Pro": {
+    "hdmi": 119,
+    "overheat": 69,
+    "drift": 49,
+    "disc": 99
+   }
+  },
+  "Xbox": {
+   "Xbox Series X": {
+    "hdmi": 149,
+    "overheat": 79,
+    "drift": 59,
+    "disc": 129
+   },
+   "Xbox Series S": {
+    "hdmi": 139,
+    "overheat": 69,
+    "drift": 59
+   },
+   "Xbox One": {
+    "hdmi": 119,
+    "overheat": 69,
+    "drift": 49,
+    "disc": 99
+   }
+  },
+  "Nintendo": {
+   "Switch": {
+    "hdmi": 89,
+    "overheat": 69,
+    "drift": 39
+   },
+   "Switch OLED": {
+    "hdmi": 99,
+    "overheat": 79,
+    "drift": 39
+   },
+   "Switch 2": {
+    "hdmi": 119,
+    "overheat": 89,
+    "drift": 49
+   }
+  }
+ }
+}
