@@ -60,7 +60,7 @@ await test('LocalBusiness, Service, FAQPage, Product and Breadcrumb schema prese
   const get = async (p) => [...(await (await fetch(BASE + p)).text()).matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
   const home = await get('/'); const lb = home.find((x) => Array.isArray(x['@type']) && x['@type'].includes('LocalBusiness'));
   eq(lb.telephone, '+19055359503'); eq(lb.address.streetAddress, '443 The Queensway South'); eq(lb.address.addressLocality, 'Keswick');
-  assert(!lb.openingHoursSpecification, 'no unverified opening hours in schema'); assert(home.some((x) => x['@type'] === 'FAQPage'), 'FAQPage');
+  eq(lb.openingHoursSpecification.length, 7, 'opening hours in schema'); eq(lb.openingHoursSpecification[0].opens, '09:00'); eq(lb.sameAs[0], 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); assert(home.some((x) => x['@type'] === 'FAQPage'), 'FAQPage');
   const svc = await get('/services/iphone-screen-replacement'); const s = svc.find((x) => x['@type'] === 'Service');
   eq(s.offers.priceCurrency, 'CAD'); eq(s.offers.lowPrice, 79); eq(s.offers.highPrice, 499); assert(svc.some((x) => x['@type'] === 'BreadcrumbList'));
   assert((await get('/shop/product/apple-airpods-pro')).some((x) => x['@type'] === 'Product'), 'Product');
@@ -248,10 +248,24 @@ await test('Admin UI: login, dashboard, bookings, pricing grid, schedule and set
   await c.close();
 });
 await test('Admin can publish verified store hours → shown on site and in LocalBusiness schema', async () => {
+  const original = (await adminFetch('/settings')).body.hours;
   const hours = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => ({ day, open: '10:00', close: '18:00', closed: day === 'Sunday' }));
   await adminFetch('/settings/hours', { method: 'PUT', data: hours });
   const html = await (await fetch(BASE + '/contact')).text(); assert(html.includes('OpeningHoursSpecification'), 'schema hours');
-  await adminFetch('/settings/hours', { method: 'PUT', data: [] });
+  await adminFetch('/settings/hours', { method: 'PUT', data: original });
+});
+await test('Booking slots match store hours: 30-min slots, 9:00–16:30 weekdays, 10:00–15:30 weekends, 14 days ahead', async () => {
+  const days = (await json('/api/availability')).body.days; eq(days.length, 15, 'today + 14 days');
+  const wk = days.find((d) => { const g = new Date(d.date + 'T12:00:00Z').getUTCDay(); return g >= 1 && g <= 5 && d.date !== days[0].date; });
+  const we = days.find((d) => { const g = new Date(d.date + 'T12:00:00Z').getUTCDay(); return (g === 0 || g === 6) && d.date !== days[0].date; });
+  const a = (await json('/api/slots?date=' + wk.date)).body.slots; eq(a[0].time, '09:00'); eq(a.at(-1).time, '16:30'); eq(a.length, 16);
+  const b = (await json('/api/slots?date=' + we.date)).body.slots; eq(b[0].time, '10:00'); eq(b.at(-1).time, '15:30'); eq(b.length, 12);
+});
+await test('Store hours shown on contact page; Google reviews link present', async () => {
+  const p = await newPage(); await p.goto(BASE + '/contact', { waitUntil: 'networkidle' });
+  assert(await p.getByText('9 a.m. – 5 p.m.').first().isVisible(), 'weekday hours'); assert(await p.getByText('10 a.m. – 4 p.m.').first().isVisible(), 'weekend hours');
+  await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+  eq(await p.getByRole('link', { name: /reviews on Google|Google reviews/ }).first().getAttribute('href'), 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); await p.close();
 });
 await test('Blocked date removes all slots', async () => {
   const d = await tomorrowOpen(); const r = await adminFetch('/t/blocked_dates', { method: 'POST', data: { date: d, reason: 'Holiday' } });

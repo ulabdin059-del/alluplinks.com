@@ -5,6 +5,10 @@ import { api } from '../lib/api.js';
 import { Field, Stars } from './ui.jsx';
 import { cx } from '../lib/utils.js';
 
+const GoogleG = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>
+);
+
 export function ReviewForm() {
   const [f, setF] = useState({ name: '', rating: 0, text: '', device: '' });
   const [state, setState] = useState({ status: 'idle', errors: {}, error: '' });
@@ -50,9 +54,12 @@ export default function ReviewsSection({ limit = 6, showForm = false }) {
     <div>
       {list.length > 0 ? (
         <>
-          <div className="reveal mb-8 flex items-center gap-3">
-            <Stars value={Math.round(avg)} size="h-5 w-5" />
-            <p className="text-sm font-semibold text-ink-600">{avg.toFixed(1)} average from {reviews.length} review{reviews.length > 1 ? 's' : ''}</p>
+          <div className="reveal mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Stars value={Math.round(avg)} size="h-5 w-5" />
+              <p className="text-sm font-semibold text-ink-600">{avg.toFixed(1)} average from {reviews.length} review{reviews.length > 1 ? 's' : ''}</p>
+            </div>
+            {business.google_review_url && <a href={business.google_review_url} target="_blank" rel="noopener noreferrer" className="btn-outline btn-sm"><GoogleG />See all reviews on Google</a>}
           </div>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {list.map((r) => (
@@ -71,11 +78,11 @@ export default function ReviewsSection({ limit = 6, showForm = false }) {
       ) : (
         <div className="reveal card grid items-center gap-6 p-8 md:grid-cols-[1fr_auto]">
           <div>
-            <p className="font-display text-xl font-bold">Recently repaired with us?</p>
-            <p className="mt-2 max-w-xl text-[15px] text-ink-500">We’d love to hear how it went. Your honest feedback helps neighbours in Keswick and Georgina choose the right repair shop.</p>
+            <p className="font-display text-xl font-bold">See what Keswick customers say</p>
+            <p className="mt-2 max-w-xl text-[15px] text-ink-500">Read our reviews on Google, or share your own experience — honest feedback helps neighbours in Keswick and Georgina choose the right repair shop.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            {business.google_review_url && <a href={business.google_review_url} target="_blank" rel="noopener noreferrer" className="btn-dark">Review us on Google</a>}
+            {business.google_review_url && <a href={business.google_review_url} target="_blank" rel="noopener noreferrer" className="btn-dark"><GoogleG />Read our Google reviews</a>}
             <a href="/reviews#write" className="btn-outline">Write a review</a>
           </div>
         </div>

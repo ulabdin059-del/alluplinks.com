@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'node:url';
-import { SERVICES, PRODUCTS, FAQS, CATEGORIES, REPAIR_TYPES, DEFAULT_SETTINGS } from './seed.js';
+import { SERVICES, PRODUCTS, FAQS, CATEGORIES, REPAIR_TYPES, DEFAULT_SETTINGS, STORE_HOURS, BOOKING_WEEKLY } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'storage');
@@ -172,5 +172,24 @@ function ensureAdmin() {
   db.prepare('INSERT INTO admin_users(email,password_hash) VALUES(?,?)').run(email, bcrypt.hashSync(password, 12));
 }
 
+// One-time data updates for databases created by an earlier version. Each runs once, in order,
+// so later edits made in the admin dashboard are never overwritten.
+const MIGRATIONS = [
+  () => { // 2026-11: owner-confirmed store hours, booking windows and Google review link.
+    setSetting('hours', STORE_HOURS);
+    const b = getSetting('booking');
+    setSetting('booking', { ...b, slot_minutes: 30, days_ahead: 14, min_lead_minutes: 30, weekly: BOOKING_WEEKLY });
+    const biz = getSetting('business');
+    if (!biz.google_review_url) setSetting('business', { ...biz, google_review_url: DEFAULT_SETTINGS.business.google_review_url });
+  }
+];
+function migrate(freshDb) {
+  const done = getSetting('schema_version') || 0;
+  if (freshDb) return setSetting('schema_version', MIGRATIONS.length);
+  for (let i = done; i < MIGRATIONS.length; i++) tx(() => { MIGRATIONS[i](); setSetting('schema_version', i + 1); });
+}
+
+const freshDb = !db.prepare('SELECT COUNT(*) n FROM categories').get().n;
 seedIfEmpty();
+migrate(freshDb);
 ensureAdmin();

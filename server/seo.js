@@ -20,6 +20,7 @@ function business() {
     makesOffer: ['Phone screen replacement', 'Phone battery replacement', 'Charging port repair', 'Back glass replacement', 'Water damage repair', 'Device trade-in'].map((n) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name: n } }))
   };
   if (b.email) o.email = b.email;
+  if (b.google_review_url) o.sameAs = [b.google_review_url];
   const open = hours.filter((h) => !h.closed && h.open && h.close);
   if (open.length) o.openingHoursSpecification = open.map((h) => ({ '@type': 'OpeningHoursSpecification', dayOfWeek: h.day, opens: h.open, closes: h.close }));
   return o;

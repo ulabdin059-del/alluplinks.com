@@ -65,8 +65,8 @@ npm run build && npm test
 
 These were deliberately **not** invented and are editable in the admin dashboard:
 
-1. **Store hours** — Admin → Site settings → Store hours. Until set, the site says "Please call for current store hours" and no hours appear in Google structured data.
-2. **Online booking windows** — Admin → Schedule. Seeded as Mon–Fri 10:00–18:00, Sat 10:00–17:00, Sun closed so booking works out of the box; adjust to your real availability.
+1. **Store hours** — set to Mon–Fri 9 a.m.–5 p.m., Sat–Sun 10 a.m.–4 p.m. Change in Admin → Site settings → Store hours.
+2. **Online booking windows** — follow store hours: 30-minute slots, bookable 14 days ahead with 30 minutes’ notice. Admin → Schedule.
 3. **Warranty** — Admin → Site settings → Warranty. Empty (hidden) until you enter your actual terms.
 4. **Public email address and postal code** — Admin → Site settings → Store information.
 5. **Product prices** — Admin → Products. Products show "Call for current price" until you enter a price. No stock levels are shown.

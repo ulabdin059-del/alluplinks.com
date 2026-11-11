@@ -1,5 +1,22 @@
 // First-run seed content for All Uplinks. Everything here is editable from the admin dashboard.
 
+export const STORE_HOURS = [
+  { day: 'Monday', open: '09:00', close: '17:00', closed: false },
+  { day: 'Tuesday', open: '09:00', close: '17:00', closed: false },
+  { day: 'Wednesday', open: '09:00', close: '17:00', closed: false },
+  { day: 'Thursday', open: '09:00', close: '17:00', closed: false },
+  { day: 'Friday', open: '09:00', close: '17:00', closed: false },
+  { day: 'Saturday', open: '10:00', close: '16:00', closed: false },
+  { day: 'Sunday', open: '10:00', close: '16:00', closed: false }
+];
+// Keys are JS weekday numbers (0 = Sunday).
+export const BOOKING_WEEKLY = {
+  0: { open: '10:00', close: '16:00' },
+  1: { open: '09:00', close: '17:00' }, 2: { open: '09:00', close: '17:00' }, 3: { open: '09:00', close: '17:00' },
+  4: { open: '09:00', close: '17:00' }, 5: { open: '09:00', close: '17:00' },
+  6: { open: '10:00', close: '16:00' }
+};
+
 export const DEFAULT_SETTINGS = {
   business: {
     name: 'All Uplinks',
@@ -15,10 +32,10 @@ export const DEFAULT_SETTINGS = {
     email: '',
     site_url: 'https://alluplinks.com',
     maps_query: 'All Uplinks - Phone Repair Keswick, 443 The Queensway South, Keswick, Ontario, Canada',
-    google_review_url: ''
+    google_review_url: 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'
   },
-  // Business hours are intentionally empty until the owner enters verified hours in the admin dashboard.
-  hours: [],
+  // Store hours confirmed by the owner: weekdays 9–5, weekends 10–4.
+  hours: STORE_HOURS,
   content: {
     announcement: 'Upfront, model-specific repair prices in CAD — book your repair online in under two minutes.',
     hero_eyebrow: 'Keswick · Georgina · York Region',
@@ -37,15 +54,10 @@ export const DEFAULT_SETTINGS = {
   booking: {
     slot_minutes: 30,
     capacity: 1,
-    days_ahead: 30,
-    min_lead_minutes: 120,
-    // Appointment windows (not public business hours). Adjust in Admin → Schedule.
-    weekly: {
-      0: null,
-      1: { open: '10:00', close: '18:00' }, 2: { open: '10:00', close: '18:00' },
-      3: { open: '10:00', close: '18:00' }, 4: { open: '10:00', close: '18:00' },
-      5: { open: '10:00', close: '18:00' }, 6: { open: '10:00', close: '17:00' }
-    }
+    days_ahead: 14,
+    min_lead_minutes: 30,
+    // Online booking windows follow store hours: 30-minute slots, last slot 30 minutes before closing.
+    weekly: BOOKING_WEEKLY
   },
   seo: {
     default_title: 'Phone Repair Keswick, ON | iPhone & Samsung Repair | All Uplinks',
