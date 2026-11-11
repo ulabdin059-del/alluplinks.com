@@ -1,4 +1,8 @@
-// Transactional email. Uses SMTP when configured (SMTP_HOST etc.); otherwise records the attempt in email_log.
+// Transactional email. Providers, in order of preference:
+//   BREVO_API_KEY  → Brevo HTTP API (free: 300 emails/day; works on hosts that block SMTP ports, e.g. Render free)
+//   RESEND_API_KEY → Resend HTTP API (free: 3,000 emails/month; needs a verified domain)
+//   SMTP_HOST      → any SMTP server via Nodemailer (only where the host allows outbound SMTP)
+// With none configured, attempts are recorded in email_log as "not_sent" and everything else keeps working.
 import nodemailer from 'nodemailer';
 import { db, getSetting } from './db.js';
 
@@ -10,6 +14,14 @@ if (process.env.SMTP_HOST) {
     secure: process.env.SMTP_SECURE === 'true',
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
   });
+}
+export const EMAIL_KIND = process.env.BREVO_API_KEY ? 'brevo' : process.env.RESEND_API_KEY ? 'resend' : transport ? 'smtp' : 'none';
+
+// MAIL_FROM: "All Uplinks <bookings@alluplinks.com>" or just an email address.
+function sender() {
+  const raw = process.env.MAIL_FROM || process.env.SMTP_USER || '';
+  const m = raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  return m ? { name: m[1] || 'All Uplinks', email: m[2] } : { name: 'All Uplinks', email: raw.trim() };
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,25 +39,39 @@ export function emailLayout(title, rows, intro) {
   </div></div></body></html>`;
 }
 
-export async function sendMail({ to, subject, html, replyTo }) {
-  if (!to) return { status: 'skipped' };
-  const log = db.prepare('INSERT INTO email_log(recipient,subject,status,error) VALUES(?,?,?,?)');
-  if (!transport) {
-    log.run(to, subject, 'not_sent', 'SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS and MAIL_FROM');
-    return { status: 'not_sent' };
-  }
-  try {
-    await transport.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, to, subject, html, replyTo });
-    log.run(to, subject, 'sent', null);
-    return { status: 'sent' };
-  } catch (e) {
-    log.run(to, subject, 'failed', String(e.message || e));
-    return { status: 'failed' };
+async function deliver({ to, subject, html, replyTo }) {
+  const from = sender();
+  if (EMAIL_KIND === 'brevo') {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ sender: from, to: [{ email: to }], subject, htmlContent: html, ...(replyTo ? { replyTo: { email: replyTo } } : {}) })
+    });
+    if (!r.ok) throw new Error(`Brevo ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  } else if (EMAIL_KIND === 'resend') {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST', headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ from: `${from.name} <${from.email}>`, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}) })
+    });
+    if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  } else {
+    await transport.sendMail({ from: `${from.name} <${from.email}>`, to, subject, html, replyTo });
   }
 }
 
-export function notifyAdmin(kind, title, body, link, html) {
-  db.prepare('INSERT INTO notifications(kind,title,body,link) VALUES(?,?,?,?)').run(kind, title, body, link);
+export async function sendMail({ to, subject, html, replyTo }) {
+  if (!to) return { status: 'skipped' };
+  const log = (status, error) => db.run('INSERT INTO email_log(recipient,subject,status,error) VALUES(?,?,?,?)', to, subject, status, error).catch(() => {});
+  if (EMAIL_KIND === 'none') {
+    await log('not_sent', 'Email not configured — set BREVO_API_KEY (or RESEND_API_KEY / SMTP_HOST) and MAIL_FROM');
+    return { status: 'not_sent' };
+  }
+  if (!sender().email) { await log('failed', 'MAIL_FROM is not set'); return { status: 'failed' }; }
+  try { await deliver({ to, subject, html, replyTo }); await log('sent', null); return { status: 'sent' }; }
+  catch (e) { await log('failed', String(e.message || e)); return { status: 'failed' }; }
+}
+
+export async function notifyAdmin(kind, title, body, link, html) {
+  await db.run('INSERT INTO notifications(kind,title,body,link) VALUES(?,?,?,?)', kind, title, body, link);
   const to = process.env.ADMIN_NOTIFY_EMAIL || getSetting('business')?.email;
   if (to) sendMail({ to, subject: `[All Uplinks] ${title}`, html: html || emailLayout(title, [['Details', body]]) }).catch(() => {});
 }

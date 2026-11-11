@@ -112,7 +112,7 @@ export function SettingsAdmin() {
   const put = (key) => (body) => adminApi(`/settings/${key}`, { method: 'PUT', body });
   return (
     <div className="space-y-6">
-      <PageTitle title="Site settings">Store information, website content and SEO defaults. Changes appear on the website immediately.</PageTitle>
+      <PageTitle title="Site settings" actions={<a href="/api/admin/backup" className="btn-outline" download>Download backup</a>}>Store information, website content and SEO defaults. Changes appear on the website immediately. Download a backup of all data (bookings, prices, settings) at any time.</PageTitle>
       <SettingsCard title="Store information" value={data.business} onSave={put('business')} description="Used in the header, footer, contact page, emails, Google Maps and structured data."
         fields={[{ name: 'name', label: 'Business name' }, { name: 'legal_name', label: 'Full store name' }, { name: 'street', label: 'Street address' }, { name: 'city', label: 'City' },
           { name: 'region', label: 'Province code' }, { name: 'region_name', label: 'Province' }, { name: 'postal_code', label: 'Postal code', hint: 'Optional — add once confirmed.' }, { name: 'country', label: 'Country code' },

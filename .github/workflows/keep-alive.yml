@@ -1,0 +1,16 @@
+name: Keep site awake
+# Render's free tier sleeps after 15 minutes without traffic; the first visit then takes ~30–60 s.
+# This pings the health endpoint every 10 minutes. It only runs when the repository variable
+# KEEPALIVE_URL is set (Settings → Secrets and variables → Actions → Variables), e.g. https://alluplinks.com
+# Note: on a private repository each run uses GitHub Actions minutes; see README for the free UptimeRobot alternative.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    if: ${{ vars.KEEPALIVE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS --retry 3 --retry-delay 20 --max-time 90 "${{ vars.KEEPALIVE_URL }}/api/health"

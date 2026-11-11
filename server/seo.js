@@ -1,5 +1,7 @@
 // Server-rendered <head> metadata, JSON-LD and crawlable fallback content for every public route.
-import { db, j, getSetting } from './db.js';
+import { db, j as parseJson, getSetting } from './db.js';
+// Accepts either a JSON string (raw row) or an already-parsed value (cached row).
+const j = (v, f) => (typeof v === 'string' ? parseJson(v, f) : v ?? f);
 import { SHOP_CATEGORIES, SHOP_BRANDS } from '../shared/constants.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -29,27 +31,27 @@ const crumbs = (site, items) => ({ '@context': 'https://schema.org', '@type': 'B
   itemListElement: [['Home', '/'], ...items].map(([name, p], i) => ({ '@type': 'ListItem', position: i + 1, name, item: site + p })) });
 const faqLd = (faqs) => faqs.length ? { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) } : null;
 
-function servicePriceRange(svc) {
+async function servicePriceRange(svc) {
   const src = j(svc.price_source, {});
   if (!src.categories?.length) return null;
-  const r = db.prepare(`SELECT MIN(p.price) lo, MAX(p.price) hi, COUNT(*) n FROM prices p JOIN models m ON m.id = p.model_id JOIN brands b ON b.id = m.brand_id
+  const r = await db.get(`SELECT MIN(p.price) lo, MAX(p.price) hi, COUNT(*) n FROM prices p JOIN models m ON m.id = p.model_id JOIN brands b ON b.id = m.brand_id
     JOIN categories c ON c.id = b.category_id JOIN repair_types r ON r.id = p.repair_type_id
-    WHERE c.slug IN (${src.categories.map(() => '?').join(',')}) AND r.key IN (${src.repairs.map(() => '?').join(',')})`).get(...src.categories, ...src.repairs);
+    WHERE c.slug IN (${src.categories.map(() => '?').join(',')}) AND r.key IN (${src.repairs.map(() => '?').join(',')})`, ...src.categories, ...src.repairs);
   return r && r.n ? r : null;
 }
 
-function meta(pathname) {
+async function meta(pathname, preload) {
   const b = getSetting('business');
   const seo = getSetting('seo');
   const site = b.site_url.replace(/\/$/, '');
-  const services = db.prepare('SELECT * FROM services WHERE active = 1 ORDER BY sort, id').all();
+  const services = preload.services;
   const svcLinks = services.map((s) => [s.name, '/services/' + s.slug]);
   const base = { status: 200, image: seo.og_image, ld: [business()], links: svcLinks };
   const loc = `${b.city}, ${b.region_name}`;
   const p = pathname.replace(/\/+$/, '') || '/';
 
   if (p === '/') {
-    const faqs = db.prepare("SELECT question q, answer a FROM faqs WHERE active = 1 AND page = 'general' ORDER BY sort, id").all();
+    const faqs = await db.all("SELECT question q, answer a FROM faqs WHERE active = 1 AND page = 'general' ORDER BY sort, id");
     return { ...base, title: seo.default_title, description: seo.default_description, h1: getSetting('content').hero_title,
       intro: getSetting('content').hero_subtitle, ld: [business(), faqLd(faqs)].filter(Boolean) };
   }
@@ -60,7 +62,7 @@ function meta(pathname) {
   if (sm) {
     const s = services.find((x) => x.slug === sm[1]);
     if (!s) return null;
-    const range = servicePriceRange(s);
+    const range = await servicePriceRange(s);
     const faqs = j(s.faqs, []);
     const svc = { '@context': 'https://schema.org', '@type': 'Service', name: s.name, serviceType: s.name, description: s.short,
       provider: { '@id': site + '/#business' }, areaServed: { '@type': 'City', name: loc }, url: site + p, image: site + img(s.image) };
@@ -90,7 +92,7 @@ function meta(pathname) {
   }
   const pm = p.match(/^\/shop\/product\/([a-z0-9-]+)$/);
   if (pm) {
-    const pr = db.prepare('SELECT * FROM products WHERE slug = ? AND active = 1').get(pm[1]);
+    const pr = preload.products.find((x) => x.slug === pm[1]);
     if (!pr) return null;
     const images = j(pr.images, []);
     const prod = { '@context': 'https://schema.org', '@type': 'Product', name: pr.name, description: pr.description, image: images.map((i) => site + img(i)),
@@ -105,7 +107,7 @@ function meta(pathname) {
     description: `Call All Uplinks at ${b.phone_display} or visit us at ${b.street}, ${loc}. Directions, map and contact form.`,
     h1: 'Contact All Uplinks', intro: `${b.legal_name}, ${b.street}, ${loc}. Phone ${b.phone_display}.`, ld: [business(), crumbs(site, [['Contact', '/contact']])] };
   if (p === '/faq') {
-    const faqs = db.prepare('SELECT question q, answer a FROM faqs WHERE active = 1 ORDER BY sort, id').all();
+    const faqs = await db.all('SELECT question q, answer a FROM faqs WHERE active = 1 ORDER BY sort, id');
     return { ...base, title: `Phone Repair FAQ | All Uplinks ${b.city}`, description: 'Answers to common questions about phone repair prices, repair times, data, water damage and trade-ins at All Uplinks in Keswick.',
       h1: 'Frequently asked questions', intro: '', ld: [business(), faqLd(faqs), crumbs(site, [['FAQ', '/faq']])].filter(Boolean) };
   }
@@ -119,10 +121,10 @@ function meta(pathname) {
   return null;
 }
 
-export function renderPage(pathname, template) {
+export async function renderPage(pathname, template, preload) {
   const b = getSetting('business');
   const site = b.site_url.replace(/\/$/, '');
-  let m = meta(pathname);
+  let m = await meta(pathname, preload);
   let status = 200;
   if (!m) { status = 404; m = { title: 'Page not found | All Uplinks', description: 'This page could not be found.', noindex: true, h1: 'Page not found', intro: '', ld: [], links: [], image: getSetting('seo').og_image }; }
   const canonical = site + (pathname.replace(/\/+$/, '') || '/');
@@ -152,14 +154,14 @@ export function renderPage(pathname, template) {
   return { status, html };
 }
 
-export function sitemapXml() {
+export async function sitemapXml() {
   const site = getSetting('business').site_url.replace(/\/$/, '');
   const today = new Date().toISOString().slice(0, 10);
   const urls = [['/', '1.0'], ['/repair-prices', '0.9'], ['/book', '0.9'], ['/services', '0.9'], ['/sell', '0.8'], ['/shop', '0.7'],
     ['/contact', '0.8'], ['/faq', '0.6'], ['/about', '0.5'], ['/reviews', '0.5'], ['/privacy', '0.2'], ['/terms', '0.2']];
-  for (const s of db.prepare('SELECT slug FROM services WHERE active = 1 ORDER BY sort').all()) urls.push(['/services/' + s.slug, '0.8']);
+  for (const s of await db.all('SELECT slug FROM services WHERE active = 1 ORDER BY sort')) urls.push(['/services/' + s.slug, '0.8']);
   for (const c of [...SHOP_CATEGORIES, ...SHOP_BRANDS]) urls.push(['/shop/' + c.slug, '0.6']);
-  for (const p of db.prepare('SELECT slug FROM products WHERE active = 1 ORDER BY sort').all()) urls.push(['/shop/product/' + p.slug, '0.5']);
+  for (const p of await db.all('SELECT slug FROM products WHERE active = 1 ORDER BY sort')) urls.push(['/shop/product/' + p.slug, '0.5']);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
     .map(([u, pr]) => `  <url><loc>${site}${u}</loc><lastmod>${today}</lastmod><priority>${pr}</priority></url>`).join('\n')}\n</urlset>\n`;
 }

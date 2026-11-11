@@ -1,5 +1,6 @@
-// Database layer: schema, migrations and first-run seeding (Node built-in SQLite).
-import { DatabaseSync } from 'node:sqlite';
+// Database layer on libSQL: a Turso cloud database in production (TURSO_DATABASE_URL), or a local
+// SQLite file in development and tests. Same SQL and the same code path in both cases.
+import { createClient } from '@libsql/client';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -11,10 +12,55 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'storage');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-export const db = new DatabaseSync(process.env.DB_PATH || path.join(DATA_DIR, 'alluplinks.db'));
-db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+const remoteUrl = process.env.TURSO_DATABASE_URL;
+export const DB_KIND = remoteUrl ? 'turso' : 'local';
+export const client = createClient(remoteUrl
+  ? { url: remoteUrl, authToken: process.env.TURSO_AUTH_TOKEN }
+  : { url: 'file:' + (process.env.DB_PATH || path.join(DATA_DIR, 'alluplinks.db')) });
 
-db.exec(`
+const norm = (args) => args.map((a) => (a === undefined ? null : typeof a === 'boolean' ? (a ? 1 : 0) : a));
+const plain = (rs) => rs.rows.map((r) => ({ ...r }));
+
+// Small async query helpers used throughout the server.
+export const db = {
+  all: async (sql, ...args) => plain(await client.execute({ sql, args: norm(args) })),
+  get: async (sql, ...args) => plain(await client.execute({ sql, args: norm(args) }))[0],
+  run: async (sql, ...args) => {
+    const r = await client.execute({ sql, args: norm(args) });
+    return { lastInsertRowid: r.lastInsertRowid == null ? null : Number(r.lastInsertRowid), changes: r.rowsAffected };
+  },
+  // Runs all statements atomically (all succeed or none do) in one round trip. stmts: [[sql, ...args], ...]
+  batch: async (stmts) => { if (stmts.length) await client.batch(stmts.map(([sql, ...args]) => ({ sql, args: norm(args) })), 'write'); }
+};
+
+// Serialises critical sections (e.g. "check slot is free, then insert booking") within this server.
+let chain = Promise.resolve();
+export function exclusive(fn) {
+  const run = chain.then(() => fn());
+  chain = run.catch(() => {});
+  return run;
+}
+
+export const j = (s, fallback) => { try { return s == null ? fallback : JSON.parse(s); } catch { return fallback; } };
+
+// Settings are read on almost every request, so they are cached in memory and written through.
+const settingsCache = new Map();
+export function getSetting(key) {
+  return settingsCache.has(key) ? settingsCache.get(key) : DEFAULT_SETTINGS[key] ?? null;
+}
+export async function setSetting(key, value) {
+  await db.run('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', key, JSON.stringify(value));
+  settingsCache.set(key, value);
+}
+async function loadSettings() {
+  settingsCache.clear();
+  for (const r of await db.all('SELECT key, value FROM settings')) settingsCache.set(r.key, j(r.value, null));
+}
+
+export const TABLE_NAMES = ['settings', 'admin_users', 'categories', 'brands', 'models', 'repair_types', 'prices', 'services', 'bookings', 'blocked_dates',
+  'tradein_devices', 'tradeins', 'products', 'inquiries', 'faqs', 'reviews', 'notifications', 'email_log'];
+
+const SCHEMA = `
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS admin_users (
   id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
@@ -80,116 +126,135 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS email_log (
   id INTEGER PRIMARY KEY, recipient TEXT, subject TEXT, status TEXT, error TEXT,
   created_at TEXT DEFAULT (datetime('now')));
-`);
+`;
 
-export const j = (s, fallback) => { try { return s == null ? fallback : JSON.parse(s); } catch { return fallback; } };
-
-export function getSetting(key) {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  return row ? j(row.value, null) : DEFAULT_SETTINGS[key] ?? null;
-}
-export function setSetting(key, value) {
-  db.prepare('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-    .run(key, JSON.stringify(value));
-}
-
-export function tx(fn) {
-  db.exec('BEGIN IMMEDIATE');
-  try { const r = fn(); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; }
-}
-
-function seedIfEmpty() {
-  const has = db.prepare('SELECT COUNT(*) n FROM categories').get().n;
-  if (has) return;
+// First-run seed. All rows are inserted with explicit ids in batched, atomic round trips so a remote
+// database is seeded in seconds; a "seed_complete" marker is written last.
+async function seedIfEmpty() {
+  const done = await db.get("SELECT 1 x FROM settings WHERE key = 'seed_complete'");
+  const hasData = (await db.get('SELECT COUNT(*) n FROM categories')).n > 0;
+  if (done || hasData) return false; // existing databases (including ones created before the marker existed) are never re-seeded
   const prices = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'repair-prices.json'), 'utf8'));
   const trade = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'tradein.json'), 'utf8'));
-  tx(() => {
-    for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) setSetting(k, v);
-    setSetting('tradein_config', {
-      creditBonus: trade.creditBonus, rangeLow: trade.rangeLow, storageBonus: trade.storageBonus,
-      condition: trade.condition, noPenalty: trade.noPenalty,
-      battery: { '85plus': 1, '80to84': 0.95, below80: 0.9, unknown: 0.95 }
-    });
+  const S = [];
+  for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) S.push(['INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)', k, JSON.stringify(v)]);
+  S.push(['INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)', 'tradein_config', JSON.stringify({
+    creditBonus: trade.creditBonus, rangeLow: trade.rangeLow, storageBonus: trade.storageBonus,
+    condition: trade.condition, noPenalty: trade.noPenalty,
+    battery: { '85plus': 1, '80to84': 0.95, below80: 0.9, unknown: 0.95 }
+  })]);
 
-    const insRT = db.prepare('INSERT INTO repair_types(device_type,key,name,time_estimate,diagnose_only,sort) VALUES(?,?,?,?,?,?)');
-    const rtId = {};
-    for (const [dt, list] of Object.entries(REPAIR_TYPES)) list.forEach(([key, name, time, diag], i) => {
-      rtId[dt + ':' + key] = Number(insRT.run(dt, key, name, time || null, diag ? 1 : 0, i).lastInsertRowid);
-    });
-
-    const insCat = db.prepare('INSERT INTO categories(slug,name,device_type,image,blurb,sort) VALUES(?,?,?,?,?,?)');
-    const insBrand = db.prepare('INSERT INTO brands(category_id,name,sort) VALUES(?,?,?)');
-    const insModel = db.prepare('INSERT INTO models(brand_id,name,sort) VALUES(?,?,?)');
-    const insPrice = db.prepare('INSERT INTO prices(model_id,repair_type_id,price) VALUES(?,?,?)');
-    CATEGORIES.forEach((c, ci) => {
-      const catId = Number(insCat.run(c.slug, c.name, c.device_type, c.image, c.blurb, ci).lastInsertRowid);
-      c.brands.forEach(([brandName, srcType, srcBrand], bi) => {
-        const bId = Number(insBrand.run(catId, brandName, bi).lastInsertRowid);
-        const models = (srcType && prices[srcType] && prices[srcType][srcBrand]) || {};
-        Object.entries(models).forEach(([m, reps], mi) => {
-          const mId = Number(insModel.run(bId, m, mi).lastInsertRowid);
-          for (const [rk, p] of Object.entries(reps)) {
-            const id = rtId[c.device_type + ':' + rk];
-            if (id) insPrice.run(mId, id, p);
-          }
-        });
+  let rtSeq = 0; const rtId = {};
+  for (const [dt, list] of Object.entries(REPAIR_TYPES)) list.forEach(([key, name, time, diag], i) => {
+    rtId[dt + ':' + key] = ++rtSeq;
+    S.push(['INSERT INTO repair_types(id,device_type,key,name,time_estimate,diagnose_only,sort) VALUES(?,?,?,?,?,?,?)', rtSeq, dt, key, name, time || null, diag ? 1 : 0, i]);
+  });
+  let bSeq = 0, mSeq = 0;
+  CATEGORIES.forEach((c, ci) => {
+    const catId = ci + 1;
+    S.push(['INSERT INTO categories(id,slug,name,device_type,image,blurb,sort) VALUES(?,?,?,?,?,?,?)', catId, c.slug, c.name, c.device_type, c.image, c.blurb, ci]);
+    c.brands.forEach(([brandName, srcType, srcBrand], bi) => {
+      const bId = ++bSeq;
+      S.push(['INSERT INTO brands(id,category_id,name,sort) VALUES(?,?,?,?)', bId, catId, brandName, bi]);
+      const models = (srcType && prices[srcType] && prices[srcType][srcBrand]) || {};
+      Object.entries(models).forEach(([m, reps], mi) => {
+        const mId = ++mSeq;
+        S.push(['INSERT INTO models(id,brand_id,name,sort) VALUES(?,?,?,?)', mId, bId, m, mi]);
+        for (const [rk, p] of Object.entries(reps)) {
+          const id = rtId[c.device_type + ':' + rk];
+          if (id) S.push(['INSERT INTO prices(model_id,repair_type_id,price) VALUES(?,?,?)', mId, id, p]);
+        }
       });
     });
-
-    const insTD = db.prepare('INSERT INTO tradein_devices(device_type,brand,model,base_value,storages,sort) VALUES(?,?,?,?,?,?)');
-    for (const [dt, brands] of Object.entries(trade.devices)) for (const [b, models] of Object.entries(brands)) {
-      Object.entries(models).forEach(([m, [val, st]], i) => insTD.run(dt, b, m, val, JSON.stringify(st), i));
-    }
-
-    const insSvc = db.prepare(`INSERT INTO services(slug,name,short,description,benefits,image,image_alt,price_source,price_note,
-      time_estimate,warranty,faqs,meta_title,meta_description,featured,sort) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-    SERVICES.forEach((s, i) => insSvc.run(s.slug, s.name, s.short, s.description, JSON.stringify(s.benefits), s.image,
-      s.image_alt, JSON.stringify(s.price_source || {}), s.price_note || null, s.time_estimate || null, s.warranty || null,
-      JSON.stringify(s.faqs || []), s.meta_title, s.meta_description, s.featured ? 1 : 0, i));
-
-    const insProd = db.prepare(`INSERT INTO products(slug,name,category,brand,condition,price,images,short,description,specs,featured,sort)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`);
-    PRODUCTS.forEach((p, i) => insProd.run(p.slug, p.name, p.category, p.brand, p.condition, p.price ?? null,
-      JSON.stringify(p.images), p.short, p.description, JSON.stringify(p.specs), p.featured ? 1 : 0, i));
-
-    const insFaq = db.prepare('INSERT INTO faqs(question,answer,page,sort) VALUES(?,?,?,?)');
-    FAQS.forEach((f, i) => insFaq.run(f.q, f.a, f.page || 'general', i));
   });
-  console.log('[db] Seeded catalogue, prices, services, products and FAQs.');
-}
-
-function ensureAdmin() {
-  const n = db.prepare('SELECT COUNT(*) n FROM admin_users').get().n;
-  if (n) return;
-  const email = (process.env.ADMIN_EMAIL || 'admin@alluplinks.com').toLowerCase();
-  let password = process.env.ADMIN_PASSWORD;
-  if (!password) {
-    password = crypto.randomBytes(9).toString('base64url');
-    const file = path.join(DATA_DIR, 'INITIAL_ADMIN_PASSWORD.txt');
-    fs.writeFileSync(file, `Admin login\nEmail: ${email}\nPassword: ${password}\n\nChange it after first login, then delete this file.\n`, { mode: 0o600 });
-    console.log(`[db] Created admin ${email}. Initial password written to ${file}`);
+  let tSeq = 0;
+  for (const [dt, brands] of Object.entries(trade.devices)) for (const [b, models] of Object.entries(brands)) {
+    Object.entries(models).forEach(([m, [val, st]], i) => S.push(['INSERT INTO tradein_devices(id,device_type,brand,model,base_value,storages,sort) VALUES(?,?,?,?,?,?,?)', ++tSeq, dt, b, m, val, JSON.stringify(st), i]));
   }
-  db.prepare('INSERT INTO admin_users(email,password_hash) VALUES(?,?)').run(email, bcrypt.hashSync(password, 12));
+  SERVICES.forEach((s, i) => S.push([`INSERT INTO services(id,slug,name,short,description,benefits,image,image_alt,price_source,price_note,
+    time_estimate,warranty,faqs,meta_title,meta_description,featured,sort) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, i + 1, s.slug, s.name, s.short, s.description,
+    JSON.stringify(s.benefits), s.image, s.image_alt, JSON.stringify(s.price_source || {}), s.price_note || null, s.time_estimate || null, s.warranty || null,
+    JSON.stringify(s.faqs || []), s.meta_title, s.meta_description, s.featured ? 1 : 0, i]));
+  PRODUCTS.forEach((p, i) => S.push([`INSERT INTO products(id,slug,name,category,brand,condition,price,images,short,description,specs,featured,sort)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, i + 1, p.slug, p.name, p.category, p.brand, p.condition, p.price ?? null, JSON.stringify(p.images), p.short, p.description,
+    JSON.stringify(p.specs), p.featured ? 1 : 0, i]));
+  FAQS.forEach((f, i) => S.push(['INSERT INTO faqs(id,question,answer,page,sort) VALUES(?,?,?,?,?)', i + 1, f.q, f.a, f.page || 'general', i]));
+  S.push(['INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)', 'schema_version', JSON.stringify(MIGRATIONS.length)]);
+  S.push(['INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)', 'seed_complete', 'true']);
+  await db.batch(S);
+  console.log(`[db] Seeded ${DB_KIND} database: catalogue, prices, services, products and FAQs.`);
+  return true;
 }
 
 // One-time data updates for databases created by an earlier version. Each runs once, in order,
 // so later edits made in the admin dashboard are never overwritten.
 const MIGRATIONS = [
-  () => { // 2026-11: owner-confirmed store hours, booking windows and Google review link.
-    setSetting('hours', STORE_HOURS);
+  async () => { // 2026-11: owner-confirmed store hours, booking windows and Google review link.
+    await setSetting('hours', STORE_HOURS);
     const b = getSetting('booking');
-    setSetting('booking', { ...b, slot_minutes: 30, days_ahead: 14, min_lead_minutes: 30, weekly: BOOKING_WEEKLY });
+    await setSetting('booking', { ...b, slot_minutes: 30, days_ahead: 14, min_lead_minutes: 30, weekly: BOOKING_WEEKLY });
     const biz = getSetting('business');
-    if (!biz.google_review_url) setSetting('business', { ...biz, google_review_url: DEFAULT_SETTINGS.business.google_review_url });
+    if (!biz.google_review_url) await setSetting('business', { ...biz, google_review_url: DEFAULT_SETTINGS.business.google_review_url });
   }
 ];
-function migrate(freshDb) {
+async function migrate() {
   const done = getSetting('schema_version') || 0;
-  if (freshDb) return setSetting('schema_version', MIGRATIONS.length);
-  for (let i = done; i < MIGRATIONS.length; i++) tx(() => { MIGRATIONS[i](); setSetting('schema_version', i + 1); });
+  for (let i = done; i < MIGRATIONS.length; i++) { await MIGRATIONS[i](); await setSetting('schema_version', i + 1); }
+  if (!getSetting('seed_complete')) await setSetting('seed_complete', true);
 }
 
-const freshDb = !db.prepare('SELECT COUNT(*) n FROM categories').get().n;
-seedIfEmpty();
-migrate(freshDb);
-ensureAdmin();
+async function ensureAdmin() {
+  const email = (process.env.ADMIN_EMAIL || 'admin@alluplinks.com').toLowerCase();
+  const n = (await db.get('SELECT COUNT(*) n FROM admin_users')).n;
+  // ADMIN_RESET_PASSWORD=true resets that admin's password to ADMIN_PASSWORD on start (for lost passwords).
+  if (n && process.env.ADMIN_RESET_PASSWORD === 'true' && process.env.ADMIN_PASSWORD) {
+    const hash = bcrypt.hashSync(process.env.ADMIN_PASSWORD, 12);
+    const r = await db.run('UPDATE admin_users SET password_hash = ? WHERE email = ?', hash, email);
+    if (!r.changes) await db.run('INSERT INTO admin_users(email,password_hash) VALUES(?,?)', email, hash);
+    console.log(`[db] Admin password reset for ${email}. Remove ADMIN_RESET_PASSWORD now.`);
+    return;
+  }
+  if (n) return;
+  let password = process.env.ADMIN_PASSWORD;
+  if (!password) {
+    if (DB_KIND === 'turso') {
+      console.error('[db] No admin account exists. Set ADMIN_EMAIL and ADMIN_PASSWORD and restart to create one.');
+      return;
+    }
+    password = crypto.randomBytes(9).toString('base64url');
+    const file = path.join(DATA_DIR, 'INITIAL_ADMIN_PASSWORD.txt');
+    fs.writeFileSync(file, `Admin login\nEmail: ${email}\nPassword: ${password}\n\nChange it after first login, then delete this file.\n`, { mode: 0o600 });
+    console.log(`[db] Created admin ${email}. Initial password written to ${file}`);
+  } else console.log(`[db] Created admin ${email}.`);
+  await db.run('INSERT INTO admin_users(email,password_hash) VALUES(?,?)', email, bcrypt.hashSync(password, 12));
+}
+
+// Full JSON backup of every table (used by Admin → Settings → Download backup and scripts/import-backup.mjs).
+export async function exportAll() {
+  const out = { format: 'alluplinks-backup', version: 1, exported_at: new Date().toISOString(), tables: {} };
+  for (const t of TABLE_NAMES) out.tables[t] = await db.all(`SELECT * FROM ${t}`);
+  return out;
+}
+// Replaces all data with a backup. Runs as atomic batches; tables are cleared children-first.
+export async function importAll(backup) {
+  if (backup?.format !== 'alluplinks-backup') throw new Error('Not an All Uplinks backup file');
+  const order = TABLE_NAMES;
+  const S = [...order].reverse().map((t) => [`DELETE FROM ${t}`]);
+  for (const t of order) for (const row of backup.tables[t] || []) {
+    const cols = Object.keys(row);
+    S.push([`INSERT INTO ${t}(${cols.join(',')}) VALUES(${cols.map(() => '?').join(',')})`, ...cols.map((c) => row[c])]);
+  }
+  await db.batch(S);
+  await loadSettings();
+}
+
+export const ready = (async () => {
+  if (DB_KIND === 'local') await client.execute('PRAGMA journal_mode = WAL').catch(() => {});
+  await client.executeMultiple(SCHEMA);
+  await loadSettings();
+  const seeded = await seedIfEmpty();
+  if (seeded) await loadSettings();
+  else await migrate();
+  await ensureAdmin();
+  console.log(`[db] Ready (${DB_KIND}).`);
+})();

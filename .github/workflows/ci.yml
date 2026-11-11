@@ -1,0 +1,26 @@
+name: CI
+# Builds the site and runs the full end-to-end test suite on every push and pull request.
+# Render deploys `main` only after this check passes (autoDeployTrigger: checksPass in render.yaml).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install Playwright (test-only, not a project dependency)
+        run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - run: npm test

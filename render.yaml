@@ -1,0 +1,40 @@
+# Render Blueprint — free web service, deployed automatically from GitHub `main`
+# after the GitHub Actions checks (build + full test suite) pass.
+services:
+  - type: web
+    name: alluplinks
+    runtime: node
+    plan: free
+    region: virginia
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: JWT_SECRET
+        generateValue: true
+      # Values below are entered in the Render dashboard (never committed).
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: ADMIN_NOTIFY_EMAIL
+        sync: false
+    domains:
+      - alluplinks.com
+      - www.alluplinks.com

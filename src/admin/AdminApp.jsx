@@ -49,7 +49,7 @@ function Dashboard() {
   return (
     <div>
       <PageTitle title="Dashboard">Overview for {new Date(data.today + 'T12:00:00Z').toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}</PageTitle>
-      {!data.smtp && <div className="mb-6 flex gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200"><AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" /><p><strong>Email is not configured.</strong> Bookings and requests are saved and appear here, but confirmation emails won’t be sent until SMTP settings are added on the server (see README). Every attempt is recorded in the <Link to="/admin/email-log" className="font-semibold underline">email log</Link>.</p></div>}
+      {!data.smtp && <div className="mb-6 flex gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200"><AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" /><p><strong>Email is not configured.</strong> Bookings and requests are saved and appear here, but confirmation emails won’t be sent until BREVO_API_KEY and MAIL_FROM are set on the server (see README). Every attempt is recorded in the <Link to="/admin/email-log" className="font-semibold underline">email log</Link>.</p></div>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map(([l, n, to]) => <Link key={l} to={`/admin/${to}`} className="card card-hover p-5"><p className="text-sm text-ink-500">{l}</p><p className="mt-1 font-display text-3xl font-extrabold">{n}</p></Link>)}
       </div>
@@ -79,6 +79,7 @@ function Dashboard() {
         </div>
       </div>
       <p className="mt-8 text-sm text-ink-400">Catalogue: {data.models} device models · {data.price_points} repair prices · {data.products} products</p>
+      <p className="mt-1 text-sm text-ink-400">System: database <strong>{data.database}</strong> · photo storage <strong>{data.storage}</strong> · email <strong>{data.email}</strong></p>
     </div>
   );
 }

@@ -272,6 +272,37 @@ await test('Blocked date removes all slots', async () => {
   eq((await json('/api/slots?date=' + d)).body.slots.length, 0); await adminFetch('/t/blocked_dates/' + r.body.id, { method: 'DELETE' });
 });
 
+console.log('\nDeployment readiness');
+await test('Health endpoint reports database, storage and email status', async () => {
+  const h = (await json('/api/health')).body; eq(h.ok, true); eq(h.database, 'local'); eq(h.storage, 'local'); eq(h.email, 'none');
+});
+await test('Backup download contains every table; restore round-trips all records', async () => {
+  const r = await adminCtx.request.get(BASE + '/api/admin/backup'); eq(r.status(), 200);
+  assert(/attachment/.test(r.headers()['content-disposition'] || ''), 'download header');
+  const backup = await r.json(); eq(backup.format, 'alluplinks-backup'); eq(backup.tables.prices.length, 579);
+  assert(backup.tables.bookings.some((b) => b.ref === bookingRef), 'booking in backup');
+  eq((await fetch(BASE + '/api/admin/backup')).status, 401, 'backup requires login');
+  // Restore into a separate fresh database through the import script, then compare.
+  const RESTORE = fs.mkdtempSync(path.join(os.tmpdir(), 'au-restore-')); const file = path.join(RESTORE, 'b.json'); fs.writeFileSync(file, JSON.stringify(backup));
+  const { execFileSync } = await import('node:child_process');
+  execFileSync(process.execPath, ['--no-warnings', 'scripts/import-backup.mjs', file, '--yes'], { cwd: ROOT, env: { ...process.env, DATA_DIR: RESTORE, ADMIN_PASSWORD: 'x-unused-123' }, stdio: 'pipe' });
+  const out = execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e', "const m = await import('./server/db.js'); await m.ready; const e = await m.exportAll(); console.log(JSON.stringify(Object.fromEntries(Object.entries(e.tables).map(([k, v]) => [k, v.length]))));"], { cwd: ROOT, env: { ...process.env, DATA_DIR: RESTORE }, encoding: 'utf8' });
+  const counts = JSON.parse(out.trim().split('\n').pop());
+  for (const [t, rows] of Object.entries(backup.tables)) eq(counts[t], rows.length, 'restored ' + t);
+  fs.rmSync(RESTORE, { recursive: true, force: true });
+});
+await test('Deleting a model removes its prices (explicit cascade)', async () => {
+  const cat = (await adminFetch('/t/categories')).body.find((c) => c.slug === 'google-pixel');
+  const brand = (await adminFetch('/t/brands?category_id=' + cat.id)).body[0];
+  const m = (await adminFetch('/t/models', { method: 'POST', data: { brand_id: brand.id, name: 'Pixel Test 99', sort: 99, active: 1 } })).body;
+  const rt = (await adminFetch('/t/repair_types?device_type=Phone')).body.find((r) => r.key === 'screen');
+  await adminFetch('/prices', { method: 'PUT', data: { model_id: m.id, repair_type_id: rt.id, price: 123 } });
+  assert((await json('/api/catalog')).body.categories.find((c) => c.slug === 'google-pixel').brands[0].models.some((x) => x.name === 'Pixel Test 99'), 'model visible');
+  await adminFetch('/t/models/' + m.id, { method: 'DELETE' });
+  const backup = await (await adminCtx.request.get(BASE + '/api/admin/backup')).json();
+  assert(!backup.tables.prices.some((p) => p.model_id === m.id), 'orphan price removed'); eq(backup.tables.prices.length, 579);
+});
+
 console.log('\nLinks, images, contact buttons, responsiveness');
 await test('Every internal link on every page resolves (no broken links)', async () => {
   const p = await newPage(); const seen = new Set(); const bad = [];

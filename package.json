@@ -13,7 +13,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
     "express": "^5.3.0",
