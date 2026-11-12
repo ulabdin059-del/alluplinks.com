@@ -57,7 +57,7 @@ export default function Product() {
             {p.images.length > 1 && <div className="mt-3 flex gap-3">{p.images.map((im, i) => (
               <button key={im} type="button" onClick={() => setActive(i)} aria-label={`Show image ${i + 1}`} aria-pressed={active === i} className={cx('h-20 w-20 overflow-hidden rounded-xl ring-2', active === i ? 'ring-brand-500' : 'ring-transparent')}><Img k={im} alt="" className="h-full w-full" sizes="80px" /></button>))}</div>}
           </div>
-          <div className="animate-fade-up">
+          <div>
             <span className={cx('chip', p.condition === 'pre-owned' && 'bg-amber-50 text-amber-800')}>{p.condition === 'pre-owned' ? 'Pre-owned' : 'New'}</span>
             {p.brand && p.brand !== 'Assorted' && <p className="mt-4 text-sm font-semibold uppercase tracking-wider text-ink-400">{p.brand}</p>}
             <h1 className="mt-1 text-3xl font-extrabold sm:text-4xl">{p.name}</h1>

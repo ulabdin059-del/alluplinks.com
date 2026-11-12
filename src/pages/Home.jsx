@@ -10,57 +10,58 @@ import { MapleLeaf } from '../components/Logo.jsx';
 import ServiceCard from '../components/ServiceCard.jsx';
 import ReviewsSection from '../components/Reviews.jsx';
 
+// Splits "Headline — highlighted part" so the part after the dash renders on its own line in red.
+function heroLines(title) {
+  const t = title || 'Phone repair in Keswick — fixed fast, priced upfront.';
+  const i = t.indexOf(' — ');
+  return i > 0 ? [t.slice(0, i), t.slice(i + 3)] : [t, ''];
+}
+
 function Hero() {
   const { business: b, content, hours } = useSite();
   const status = storeStatus(hours);
   const { catalog } = useCatalog();
+  const [lead, accent] = heroLines(content.hero_title);
   const sample = (() => {
     const m = catalog?.categories.find((c) => c.slug === 'iphone')?.brands[0]?.models.find((x) => x.name === 'iPhone 15');
     return m ? { model: 'iPhone 15', screen: m.prices.screen, battery: m.prices.battery } : null;
   })();
+  // No entrance animation here: the server already paints this hero, so it must not fade out and back in.
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-brand-50/80 via-white to-white">
       <div className="bg-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden="true" />
-      <div className="container-x relative grid items-center gap-12 pb-16 pt-10 sm:pt-14 lg:grid-cols-[1.05fr_.95fr] lg:pb-24 lg:pt-20">
-        <div className="animate-fade-up">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="eyebrow"><MapleLeaf className="h-3.5 w-3.5" />{content.hero_eyebrow || 'Keswick, Ontario'}</span>
-            {status && <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-600 ring-1 ring-mist-200"><span className={status.open ? 'h-2 w-2 rounded-full bg-emerald-500' : 'h-2 w-2 rounded-full bg-ink-300'} aria-hidden="true" />{status.label}</span>}
-          </div>
-          <h1 className="mt-5 text-[2.6rem] font-extrabold leading-[1.04] sm:text-6xl lg:text-[4.1rem]">
-            {(content.hero_title || 'Professional Phone Repair in Keswick, Ontario').replace(/ in Keswick, Ontario$/, '')}
-            {/ in Keswick, Ontario$/.test(content.hero_title || 'Professional Phone Repair in Keswick, Ontario') && <span className="block text-brand-600"> in Keswick, Ontario</span>}
+      <div className="container-x relative grid items-center gap-8 pb-12 pt-8 sm:gap-10 sm:pb-16 sm:pt-12 lg:grid-cols-[1.2fr_.8fr] lg:gap-14 lg:pb-24 lg:pt-16">
+        <div>
+          <p className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink-600 shadow-sm ring-1 ring-mist-200">
+            <span className="inline-flex items-center gap-1.5 text-brand-700"><MapleLeaf className="h-3.5 w-3.5" />{content.hero_eyebrow || 'Keswick, Ontario'}</span>
+            {status && <><span className="text-mist-300" aria-hidden="true">|</span><span className="inline-flex items-center gap-1.5"><span className={status.open ? 'h-2 w-2 rounded-full bg-emerald-500' : 'h-2 w-2 rounded-full bg-ink-300'} aria-hidden="true" />{status.label}</span></>}
+          </p>
+          <h1 className="mt-5 text-balance text-[2.3rem] font-extrabold leading-[1.06] tracking-tight min-[380px]:text-[2.55rem] sm:text-[3.25rem] lg:text-[3.45rem] xl:text-[3.9rem]">
+            {lead}{accent && <span className="mt-1 block text-brand-600">{accent}</span>}
           </h1>
-          <p className="lead mt-6 max-w-xl">{content.hero_subtitle}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href={telHref(b)} className="btn-dark btn-lg"><Phone className="h-5 w-5" aria-hidden="true" />Call Now</a>
-            <Link to="/book" className="btn-primary btn-lg"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
-            <a href="#services" className="btn-outline btn-lg">Explore Services<ArrowRight className="h-4 w-4" aria-hidden="true" /></a>
+          <p className="mt-5 max-w-xl text-[1.05rem] leading-relaxed text-ink-500 sm:text-lg">{content.hero_subtitle}</p>
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+            <Link to="/book" className="btn-primary btn-lg px-4 sm:px-7"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
+            <a href={telHref(b)} className="btn-dark btn-lg px-4 sm:px-7"><Phone className="h-5 w-5" aria-hidden="true" />Call Now</a>
           </div>
-          <ul className="mt-10 grid max-w-xl grid-cols-1 gap-3 text-sm text-ink-600 sm:grid-cols-3">
-            {[[BadgeDollarSign, 'Exact prices by model'], [Timer, 'Many repairs under an hour'], [CalendarCheck, 'Book online 24/7']].map(([I, t]) => (
-              <li key={t} className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-white shadow-card ring-1 ring-mist-200"><I className="h-4 w-4 text-brand-600" aria-hidden="true" /></span>{t}</li>
+          <Link to="/repair-prices" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline">Or see your exact price in 30 seconds<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+          <ul className="mt-7 flex flex-col gap-2 text-sm font-medium text-ink-600 sm:flex-row sm:flex-wrap sm:gap-x-5">
+            {[[BadgeDollarSign, 'Exact prices by model'], [Timer, 'Most repairs under an hour'], [CalendarCheck, 'Book online 24/7']].map(([I, t]) => (
+              <li key={t} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-brand-600" aria-hidden="true" />{t}</li>
             ))}
           </ul>
         </div>
-        <div className="relative animate-fade-in">
-          <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-gradient-to-tr from-brand-100/70 to-transparent blur-2xl" aria-hidden="true" />
-          <div className="overflow-hidden rounded-[2rem] shadow-lift ring-1 ring-mist-200">
-            <Img k="hero-technician" alt="All Uplinks technician repairing an opened smartphone at the bench" priority className="aspect-[4/3.4] w-full" sizes="(min-width:1024px) 45vw, 100vw" />
+        <div className="relative">
+          <div className="absolute -inset-6 -z-10 hidden rounded-[2.5rem] bg-gradient-to-tr from-brand-100/70 to-transparent blur-2xl lg:block" aria-hidden="true" />
+          <div className="overflow-hidden rounded-3xl shadow-lift ring-1 ring-mist-200 lg:rounded-[2rem]">
+            <Img k="hero-technician" alt="All Uplinks technician repairing an opened smartphone at the bench" priority className="aspect-[16/10] w-full lg:aspect-[4/4.4]" sizes="(min-width:1024px) 38vw, 100vw" />
           </div>
-          {sample && (
-            <div className="absolute -bottom-6 left-4 right-4 rounded-2xl bg-white/95 p-4 shadow-lift ring-1 ring-mist-200 backdrop-blur sm:left-auto sm:right-[-12px] sm:w-72">
-              <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">Example · {sample.model}</p>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <div><p className="text-xs text-ink-500">Screen</p><p className="font-display text-xl font-extrabold">{money(sample.screen)}</p></div>
-                <div><p className="text-xs text-ink-500">Battery</p><p className="font-display text-xl font-extrabold">{money(sample.battery)}</p></div>
-              </div>
-              <Link to="/repair-prices" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">Find your model <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+          <div className="absolute bottom-3 left-3 w-60 rounded-2xl bg-white/95 p-3.5 shadow-lift ring-1 ring-mist-200 backdrop-blur sm:bottom-4 sm:left-4 sm:w-64 lg:-bottom-6 lg:-left-8 lg:w-72 lg:p-4" aria-live="polite">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Example · iPhone 15</p>
+            <div className="mt-1.5 grid grid-cols-2 gap-3">
+              <div><p className="text-xs text-ink-500">Screen</p><p className="font-display text-lg font-extrabold sm:text-xl">{sample ? money(sample.screen) : <span className="inline-block h-6 w-14 animate-pulse rounded bg-mist-200 align-middle" />}</p></div>
+              <div><p className="text-xs text-ink-500">Battery</p><p className="font-display text-lg font-extrabold sm:text-xl">{sample ? money(sample.battery) : <span className="inline-block h-6 w-14 animate-pulse rounded bg-mist-200 align-middle" />}</p></div>
             </div>
-          )}
-          <div className="absolute -left-4 top-6 hidden rounded-2xl bg-white/95 px-4 py-3 shadow-lift ring-1 ring-mist-200 backdrop-blur sm:flex sm:items-center sm:gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50"><Wrench className="h-5 w-5 text-emerald-600" aria-hidden="true" /></span>
-            <span><span className="block text-sm font-bold">Phones · Tablets · Laptops</span><span className="block text-xs text-ink-500">and game consoles</span></span>
           </div>
         </div>
       </div>

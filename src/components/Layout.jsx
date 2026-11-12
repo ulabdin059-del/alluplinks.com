@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, X, Phone, ChevronDown, CalendarCheck, MapPin, ArrowRight } from 'lucide-react';
@@ -24,9 +24,11 @@ function Announcement() {
       <div className="container-x flex items-center justify-between gap-4 py-2 text-[13px] font-medium">
         <p className="flex min-w-0 items-center gap-2">
           <MapleLeaf className="h-3.5 w-3.5 shrink-0 text-brand-400" />
-          <span className="truncate">{content?.announcement || 'Model-specific repair prices in CAD — book online.'}</span>
+          <span className="truncate sm:hidden">{content?.announcement_short || 'Upfront prices · Book online'}</span>
+          <span className="hidden truncate sm:inline">{content?.announcement}</span>
           <Link to="/repair-prices" className="ml-1 hidden shrink-0 items-center gap-1 font-semibold text-brand-300 hover:text-white md:inline-flex">Check your price <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
         </p>
+        <a href={telHref(business)} className="shrink-0 font-semibold text-white sm:hidden">{business.phone_display}</a>
         <div className="hidden shrink-0 items-center gap-5 lg:flex">
           {status && <span className="inline-flex items-center gap-2"><span className={cx('h-2 w-2 rounded-full', status.open ? 'bg-emerald-400' : 'bg-white/40')} aria-hidden="true" />{status.label}</span>}
           <a href={mapsDirections(business)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-white/80 hover:text-white"><MapPin className="h-3.5 w-3.5" aria-hidden="true" />{business.street}, {business.city}</a>
@@ -115,7 +117,8 @@ function Header() {
             <Link to="/" aria-label="All Uplinks home" onClick={() => setOpen(false)}><Logo /></Link>
             <button type="button" className="btn-ghost px-2.5" aria-label="Close menu" onClick={() => setOpen(false)}><X className="h-6 w-6" /></button>
           </div>
-          <nav aria-label="Mobile" className="container-x flex flex-col gap-1 py-6">
+          {/* Close immediately on any link tap (the next page may still be loading in the background). */}
+          <nav aria-label="Mobile" className="container-x flex flex-col gap-1 py-6" onClick={(e) => { if (e.target.closest('a')) setOpen(false); }}>
             {mobileStatus && <p className="mb-3 inline-flex items-center gap-2 self-start rounded-full bg-mist-100 px-3 py-1.5 text-sm font-semibold text-ink-600"><span className={cx('h-2 w-2 rounded-full', mobileStatus.open ? 'bg-emerald-500' : 'bg-ink-300')} aria-hidden="true" />{mobileStatus.label}</p>}
             {NAV.map((n) => (
               <NavLink key={n.to} to={n.to} className={({ isActive }) => cx('rounded-xl px-4 py-3.5 text-lg font-semibold', isActive ? 'bg-brand-50 text-brand-700' : 'text-ink hover:bg-mist-100')}>{n.label === 'Repairs' ? 'Repair services' : n.label}</NavLink>
@@ -193,15 +196,24 @@ function Footer() {
   );
 }
 
+// Sticky Call / Book bar on phones. Hidden at the top of the page (the hero already has these buttons)
+// and slides in once the visitor scrolls past the first screen.
 function MobileBar() {
   const { business } = useSite();
   const { pathname } = useLocation();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const on = () => setShow(window.scrollY > Math.min(560, window.innerHeight * 0.7));
+    on(); window.addEventListener('scroll', on, { passive: true });
+    return () => window.removeEventListener('scroll', on);
+  }, [pathname]);
   if (pathname === '/book') return null;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-mist-200 bg-white/95 p-3 backdrop-blur sm:hidden" style={{ paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
+    <div className={cx('fixed inset-x-0 bottom-0 z-30 border-t border-mist-200 bg-white/95 p-3 backdrop-blur transition-transform duration-300 ease-out sm:hidden', show ? 'translate-y-0' : 'translate-y-full')}
+      style={{ paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }} aria-hidden={!show} data-testid="mobile-bar">
       <div className="grid grid-cols-2 gap-2">
-        <a href={telHref(business)} className="btn-outline"><Phone className="h-4 w-4" aria-hidden="true" />Call now</a>
-        <Link to="/book" className="btn-primary"><CalendarCheck className="h-4 w-4" aria-hidden="true" />Book repair</Link>
+        <a href={telHref(business)} className="btn-outline" tabIndex={show ? 0 : -1}><Phone className="h-4 w-4" aria-hidden="true" />Call now</a>
+        <Link to="/book" className="btn-primary" tabIndex={show ? 0 : -1}><CalendarCheck className="h-4 w-4" aria-hidden="true" />Book repair</Link>
       </div>
     </div>
   );
@@ -213,7 +225,10 @@ export default function Layout() {
       <a href="#main" className="sr-only z-50 rounded-lg bg-white px-4 py-2 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
       <Announcement />
       <Header />
-      <main id="main" className="flex-1 pb-20 sm:pb-0"><Outlet /></main>
+      <main id="main" className="flex-1 pb-20 sm:pb-0">
+        {/* One boundary for all pages: during navigation the current page stays visible while the next loads. */}
+        <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}><Outlet /></Suspense>
+      </main>
       <Footer />
       <MobileBar />
     </div>

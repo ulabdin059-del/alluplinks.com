@@ -161,7 +161,7 @@ export default function Book() {
   return (
     <div className="bg-gradient-to-b from-brand-50/70 to-white">
       <div id="book-top" className="container-x scroll-mt-24 py-10 sm:py-14">
-        <div className="mx-auto max-w-2xl text-center animate-fade-up">
+        <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow"><CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />Online booking</span>
           <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">Book a repair</h1>
           <p className="lead mt-3">Tell us about your device, choose a time and we’ll have everything ready when you arrive.</p>

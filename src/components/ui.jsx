@@ -28,7 +28,7 @@ export function PageHero({ eyebrow, title, children, image, imageAlt, crumbs = [
     <section className="relative overflow-hidden border-b border-mist-200 bg-gradient-to-b from-brand-50/70 to-white">
       <div className="bg-grid absolute inset-0 opacity-60" aria-hidden="true" />
       <div className="container-x relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.15fr_.85fr] lg:py-20">
-        <div className="animate-fade-up">
+        <div>
           {crumbs.length > 0 && (
             <nav aria-label="Breadcrumb" className="mb-5 text-sm text-ink-500">
               <ol className="flex flex-wrap items-center gap-1.5">
@@ -46,7 +46,7 @@ export function PageHero({ eyebrow, title, children, image, imageAlt, crumbs = [
           {actions && <div className="mt-8 flex flex-wrap gap-3">{actions}</div>}
         </div>
         {image && (
-          <div className="relative hidden animate-fade-in lg:block">
+          <div className="relative hidden lg:block">
             <div className="overflow-hidden rounded-3xl shadow-lift ring-1 ring-mist-200">
               <Img k={image} alt={imageAlt} priority className="aspect-[4/3] w-full" sizes="40vw" />
             </div>

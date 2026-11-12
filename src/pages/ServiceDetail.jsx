@@ -76,7 +76,7 @@ export default function ServiceDetail() {
     <div ref={ref}>
       <section className="relative overflow-hidden border-b border-mist-200 bg-gradient-to-b from-brand-50/70 to-white">
         <div className="container-x grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-2 lg:py-16">
-          <div className="animate-fade-up">
+          <div>
             <nav aria-label="Breadcrumb" className="mb-5 text-sm text-ink-500">
               <ol className="flex flex-wrap items-center gap-1.5"><li><Link to="/" className="hover:text-brand-700">Home</Link></li><li aria-hidden="true">/</li>
                 <li><Link to="/services" className="hover:text-brand-700">Services</Link></li><li aria-hidden="true">/</li><li aria-current="page" className="text-ink-700">{s.name}</li></ol>
@@ -94,7 +94,7 @@ export default function ServiceDetail() {
             </div>
             <WarrantyNote className="mt-5" />
           </div>
-          <div className="animate-fade-in overflow-hidden rounded-3xl shadow-lift ring-1 ring-mist-200">
+          <div className="overflow-hidden rounded-3xl shadow-lift ring-1 ring-mist-200">
             <Img k={s.image} alt={s.image_alt || s.name} priority className="aspect-[4/3] w-full" sizes="(min-width:1024px) 50vw, 100vw" />
           </div>
         </div>

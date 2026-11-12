@@ -107,7 +107,7 @@ export default function Sell() {
     <div ref={ref}>
       <section className="relative overflow-hidden border-b border-mist-200 bg-gradient-to-b from-brand-50/70 to-white">
         <div className="container-x grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.1fr_.9fr]">
-          <div className="animate-fade-up">
+          <div>
             <span className="eyebrow"><HandCoins className="h-3.5 w-3.5" aria-hidden="true" />Sell / Trade-in</span>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.08] sm:text-5xl">Sell or trade in your phone</h1>
             <p className="lead mt-5 max-w-xl">Answer a few quick questions for an instant estimate on your iPhone, Samsung Galaxy, Google Pixel or tablet — working, cracked or worn out. Choose cash or a higher store credit toward your next device or repair.</p>

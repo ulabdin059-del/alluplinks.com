@@ -188,6 +188,11 @@ async function seedIfEmpty() {
 
 // One-time data updates for databases created by an earlier version. Each runs once, in order,
 // so later edits made in the admin dashboard are never overwritten.
+const OLD_HERO = {
+  hero_eyebrow: 'Keswick · Georgina · York Region',
+  hero_title: 'Professional Phone Repair in Keswick, Ontario',
+  hero_subtitle: 'Cracked screen, tired battery or a phone that won’t charge? All Uplinks repairs iPhone, Samsung, Google Pixel, iPad, laptops and game consoles at our Queensway South store — with clear prices before any work begins.'
+};
 const MIGRATIONS = [
   async () => { // 2026-11: owner-confirmed store hours, booking windows and Google review link.
     await setSetting('hours', STORE_HOURS);
@@ -195,6 +200,12 @@ const MIGRATIONS = [
     await setSetting('booking', { ...b, slot_minutes: 30, days_ahead: 14, min_lead_minutes: 30, weekly: BOOKING_WEEKLY });
     const biz = getSetting('business');
     if (!biz.google_review_url) await setSetting('business', { ...biz, google_review_url: DEFAULT_SETTINGS.business.google_review_url });
+  },
+  async () => { // 2026-11: new hero copy — only replaces text that still matches the previous defaults.
+    const c = { ...getSetting('content') };
+    for (const [k, old] of Object.entries(OLD_HERO)) if (c[k] === old) c[k] = DEFAULT_SETTINGS.content[k];
+    if (!c.announcement_short) c.announcement_short = DEFAULT_SETTINGS.content.announcement_short;
+    await setSetting('content', c);
   }
 ];
 async function migrate() {

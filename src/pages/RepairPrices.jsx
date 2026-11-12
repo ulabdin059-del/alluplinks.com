@@ -11,7 +11,7 @@ export default function RepairPrices() {
   return (
     <div ref={ref} className="bg-gradient-to-b from-brand-50/70 via-white to-white">
       <div className="container-x py-12 sm:py-16">
-        <div className="mx-auto max-w-2xl text-center animate-fade-up">
+        <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">Instant quote</span>
           <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">Repair price calculator</h1>
           <p className="lead mt-4">Select your device, model and repair to see your price in Canadian dollars and the estimated repair time.</p>

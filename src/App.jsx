@@ -2,56 +2,58 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
-import Spinner from './components/Spinner.jsx';
+import { loaders } from './routes.js';
 
-const Services = lazy(() => import('./pages/Services.jsx'));
-const ServiceDetail = lazy(() => import('./pages/ServiceDetail.jsx'));
-const RepairPrices = lazy(() => import('./pages/RepairPrices.jsx'));
-const Book = lazy(() => import('./pages/Book.jsx'));
-const Sell = lazy(() => import('./pages/Sell.jsx'));
-const Shop = lazy(() => import('./pages/Shop.jsx'));
-const Product = lazy(() => import('./pages/Product.jsx'));
-const Contact = lazy(() => import('./pages/Contact.jsx'));
-const Faq = lazy(() => import('./pages/Faq.jsx'));
-const About = lazy(() => import('./pages/About.jsx'));
-const Reviews = lazy(() => import('./pages/Reviews.jsx'));
-const Legal = lazy(() => import('./pages/Legal.jsx'));
-const NotFound = lazy(() => import('./pages/NotFound.jsx'));
-const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
+const Services = lazy(loaders.services);
+const ServiceDetail = lazy(loaders.serviceDetail);
+const RepairPrices = lazy(loaders.repairPrices);
+const Book = lazy(loaders.book);
+const Sell = lazy(loaders.sell);
+const Shop = lazy(loaders.shop);
+const Product = lazy(loaders.product);
+const Contact = lazy(loaders.contact);
+const Faq = lazy(loaders.faq);
+const About = lazy(loaders.about);
+const Reviews = lazy(loaders.reviews);
+const Legal = lazy(loaders.legal);
+const NotFound = lazy(loaders.notFound);
+const AdminApp = lazy(loaders.admin);
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
+  const { pathname, hash } = useLocation();
+  useEffect(() => { if (!hash) window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname, hash]);
   return null;
 }
 
-const Page = ({ children }) => <Suspense fallback={<div className="grid min-h-[50vh] place-items-center"><Spinner /></div>}>{children}</Suspense>;
-
+// Navigation runs as a React transition (see main.jsx), so while the next page's code loads the current
+// page stays on screen. The page boundary lives in Layout; the fallback below only covers the admin area.
 export default function App() {
   return (
     <>
       <ScrollToTop />
-      <Routes>
-        <Route path="/admin/*" element={<Page><AdminApp /></Page>} />
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="services" element={<Page><Services /></Page>} />
-          <Route path="services/:slug" element={<Page><ServiceDetail /></Page>} />
-          <Route path="repair-prices" element={<Page><RepairPrices /></Page>} />
-          <Route path="book" element={<Page><Book /></Page>} />
-          <Route path="sell" element={<Page><Sell /></Page>} />
-          <Route path="shop" element={<Page><Shop /></Page>} />
-          <Route path="shop/product/:slug" element={<Page><Product /></Page>} />
-          <Route path="shop/:category" element={<Page><Shop /></Page>} />
-          <Route path="contact" element={<Page><Contact /></Page>} />
-          <Route path="faq" element={<Page><Faq /></Page>} />
-          <Route path="about" element={<Page><About /></Page>} />
-          <Route path="reviews" element={<Page><Reviews /></Page>} />
-          <Route path="privacy" element={<Page><Legal kind="privacy" /></Page>} />
-          <Route path="terms" element={<Page><Legal kind="terms" /></Page>} />
-          <Route path="*" element={<Page><NotFound /></Page>} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<div className="min-h-screen bg-mist-50" aria-busy="true" />}>
+        <Routes>
+          <Route path="/admin/*" element={<AdminApp />} />
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="services" element={<Services />} />
+            <Route path="services/:slug" element={<ServiceDetail />} />
+            <Route path="repair-prices" element={<RepairPrices />} />
+            <Route path="book" element={<Book />} />
+            <Route path="sell" element={<Sell />} />
+            <Route path="shop" element={<Shop />} />
+            <Route path="shop/product/:slug" element={<Product />} />
+            <Route path="shop/:category" element={<Shop />} />
+            <Route path="contact" element={<Contact />} />
+            <Route path="faq" element={<Faq />} />
+            <Route path="about" element={<About />} />
+            <Route path="reviews" element={<Reviews />} />
+            <Route path="privacy" element={<Legal kind="privacy" />} />
+            <Route path="terms" element={<Legal kind="terms" />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </>
   );
 }

@@ -51,7 +51,7 @@ for (const r of ROUTES) {
     assert(t && d, 'missing title/description'); assert(!titles.has(t), 'duplicate title ' + t); assert(!descs.has(d), 'duplicate description');
     titles.add(t); descs.add(d);
     assert(html.includes(`<link rel="canonical" href="https://alluplinks.com${r === '/' ? '/' : r}">`), 'canonical');
-    assert(/<h1>/.test(html) && html.includes('og:title') && html.includes('application/ld+json'), 'h1/og/jsonld');
+    assert(/<h1[ >]/.test(html) && html.includes('og:title') && html.includes('application/ld+json'), 'h1/og/jsonld');
     assert(t.length <= 70, `title too long (${t.length}): ${t}`);
   });
 }
@@ -301,6 +301,112 @@ await test('Deleting a model removes its prices (explicit cascade)', async () =>
   await adminFetch('/t/models/' + m.id, { method: 'DELETE' });
   const backup = await (await adminCtx.request.get(BASE + '/api/admin/backup')).json();
   assert(!backup.tables.prices.some((p) => p.model_id === m.id), 'orphan price removed'); eq(backup.tables.prices.length, 579);
+});
+
+console.log('\nFirst load, transitions, hero, fonts & accessibility (A–H regression)');
+await test('A/B: server sends a styled first view + store settings; no unstyled link list', async () => {
+  const html = await (await fetch(BASE + '/')).text();
+  assert(!html.includes('seo-fallback'), 'old unstyled fallback removed');
+  assert(html.includes('data-shell') && html.includes('aria-label="All Uplinks home"'), 'header in first view');
+  assert(/<h1 class="[^"]*text-balance[^"]*">Phone repair in Keswick<span[^>]*>fixed fast, priced upfront\.<\/span><\/h1>/.test(html), 'styled hero h1');
+  const boot = JSON.parse(html.match(/<script type="application\/json" id="__SITE__">([\s\S]*?)<\/script>/)[1]);
+  eq(boot.content.hero_title, 'Phone repair in Keswick — fixed fast, priced upfront.'); eq(boot.business.phone_tel, '+19055359503');
+  assert(boot.hours.length === 7 && boot.services.length === 18, 'hours + services embedded');
+  for (const href of ['/repair-prices', '/book', '/services/iphone-screen-replacement']) assert(html.includes(`href="${href}"`), 'crawlable link ' + href);
+  const svc = await (await fetch(BASE + '/services/water-damage-repair')).text();
+  assert(/<h1 class="text-4xl[^"]*">Water Damage Repair in Keswick<\/h1>/.test(svc), 'styled first view on inner pages');
+});
+await test('A: before JavaScript loads, the page already looks finished (desktop + 360px phone)', async () => {
+  for (const vp of [{ width: 1366, height: 900 }, { width: 360, height: 740 }]) {
+    const c = await browser.newContext({ viewport: vp, isMobile: vp.width < 500 }); const p = await c.newPage();
+    await p.route('**/assets/*.js', (r) => r.abort());
+    await p.goto(BASE + '/', { waitUntil: 'load' });
+    const info = await p.evaluate(() => { const h = document.querySelector('main h1').getBoundingClientRect(); const nav = document.querySelector('nav[aria-label="Site"]').getBoundingClientRect();
+      return { h1Size: parseFloat(getComputedStyle(document.querySelector('main h1')).fontSize), h1Top: h.top, navTop: nav.top, book: !!document.querySelector('main a[href="/book"].btn-primary'), vh: innerHeight }; });
+    assert(info.h1Size >= 30, 'big hero heading ' + info.h1Size); assert(info.h1Top < 260, 'heading near top'); assert(info.book, 'Book button styled');
+    assert(info.navTop > info.vh, 'link list is below the first screen'); await c.close();
+  }
+});
+await test('A: hand-over from first view to app moves nothing (same positions)', async () => {
+  const c = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true }); const p = await c.newPage();
+  await p.route('**/assets/*.js', async (r) => { await new Promise((x) => setTimeout(x, 1500)); r.continue(); });
+  const pos = () => p.evaluate(() => ['main h1', 'main h1 + p', 'main a.btn-primary', 'main a.btn-dark', 'main section img'].map((q) => Math.round(document.querySelector(q).getBoundingClientRect().top)));
+  p.goto(BASE + '/').catch(() => {}); await p.waitForSelector('[data-shell]'); await p.waitForTimeout(300); const before = await pos();
+  await p.waitForFunction(() => !document.querySelector('[data-shell]'), null, { timeout: 15000 }); await p.waitForTimeout(500); const after = await pos();
+  eq(JSON.stringify(after), JSON.stringify(before), 'element tops'); await c.close();
+});
+await test('B/C: zero layout shift on the homepage (desktop + phone)', async () => {
+  for (const vp of [{ width: 1366, height: 900 }, { width: 390, height: 844 }]) {
+    const c = await browser.newContext({ viewport: vp, isMobile: vp.width < 500 }); const p = await c.newPage();
+    await p.addInitScript(() => { window.__cls = 0; new PerformanceObserver((l) => l.getEntries().forEach((e) => { if (!e.hadRecentInput) window.__cls += e.value; })).observe({ type: 'layout-shift', buffered: true }); });
+    await p.goto(BASE + '/', { waitUntil: 'networkidle' }); await p.waitForTimeout(800);
+    const cls = await p.evaluate(() => window.__cls); assert(cls < 0.01, `CLS ${cls.toFixed(4)} at ${vp.width}px`); await c.close();
+  }
+});
+await test('C: fonts are self-hosted and preloaded (no Google Fonts requests)', async () => {
+  const p = await newPage(); const urls = []; p.on('request', (r) => urls.push(r.url()));
+  await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+  assert(!urls.some((u) => /fonts\.(googleapis|gstatic)\.com/.test(u)), 'no Google Fonts');
+  assert(urls.some((u) => u.endsWith('/fonts/inter-latin-var.woff2')) && urls.some((u) => u.endsWith('/fonts/plus-jakarta-sans-latin-var.woff2')), 'self-hosted fonts requested');
+  for (const f of ['inter-latin-var.woff2', 'plus-jakarta-sans-latin-var.woff2']) eq((await fetch(BASE + '/fonts/' + f)).status, 200, f);
+  const html = await (await fetch(BASE + '/')).text(); assert(html.includes('rel="preload" href="/fonts/inter-latin-var.woff2"'), 'preload'); await p.close();
+});
+await test('D: changing pages never shows a blank screen or spinner', async () => {
+  const c = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true }); const p = await c.newPage();
+  await p.goto(BASE + '/', { waitUntil: 'networkidle' }); await p.waitForTimeout(500);
+  for (const [link, h1] of [['Prices', 'Repair price calculator'], ['Sell / Trade-in', 'Sell or trade in your phone'], ['Contact', 'Get in touch']]) {
+    await p.getByRole('button', { name: 'Open menu' }).click(); await p.getByRole('dialog').getByRole('link', { name: link, exact: true }).click();
+    for (let i = 0; i < 6; i++) { // sample the screen during the change
+      const st = await p.evaluate(() => ({ h1: document.querySelector('main h1')?.textContent || '', busy: [...document.querySelectorAll('[aria-busy="true"]')].some((e) => e.getBoundingClientRect().height > 0), spinner: !!document.querySelector('main [role="status"] svg.animate-spin') }));
+      assert(st.h1 && !st.busy && !st.spinner, `blank/spinner while opening ${link}: ${JSON.stringify(st)}`); await p.waitForTimeout(40);
+    }
+    await p.waitForFunction((t) => document.querySelector('main h1')?.textContent.includes(t), h1);
+  }
+  await c.close();
+});
+await test('E: hero — customer-focused heading, two main buttons above the fold at every size', async () => {
+  for (const vp of [{ width: 1440, height: 900 }, { width: 820, height: 1180 }, { width: 390, height: 844 }, { width: 360, height: 740 }]) {
+    const c = await browser.newContext({ viewport: vp, isMobile: vp.width < 500 }); const p = await c.newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+    const r = await p.evaluate(() => { const sec = document.querySelector('main section'); const btns = [...sec.querySelectorAll('a.btn-lg')];
+      return { h1: sec.querySelector('h1').textContent, btns: btns.map((b) => [b.textContent.trim(), Math.round(b.getBoundingClientRect().bottom)]), vh: innerHeight, overflow: document.documentElement.scrollWidth - innerWidth }; });
+    eq(r.h1, 'Phone repair in Keswickfixed fast, priced upfront.'); eq(r.btns.length, 2, 'two hero buttons');
+    eq(r.btns.map((b) => b[0]).join('|'), 'Book a Repair|Call Now'); assert(r.btns.every((b) => b[1] <= r.vh), `buttons above fold at ${vp.width}px`); assert(r.overflow <= 0, 'no sideways scroll');
+    await c.close();
+  }
+});
+await test('E: phone sticky Call/Book bar hidden at the top, slides in after scrolling', async () => {
+  const c = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true }); const p = await c.newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+  const visible = () => p.evaluate(() => { const r = document.querySelector('[data-testid="mobile-bar"]').getBoundingClientRect(); return r.top < innerHeight - 4; });
+  eq(await visible(), false, 'hidden at top'); await p.evaluate(() => window.scrollTo({ top: 1200, behavior: 'instant' })); await p.waitForTimeout(500);
+  eq(await visible(), true, 'shown after scroll'); await c.close();
+});
+await test('F: logo subtitle stays on one line at 320px and 360px, no sideways scroll', async () => {
+  for (const w of [320, 360]) {
+    const c = await browser.newContext({ viewport: { width: w, height: 740 }, isMobile: true }); const p = await c.newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+    const r = await p.evaluate(() => { const s = [...document.querySelectorAll('header span')].find((x) => x.textContent === 'Phone Repair · Keswick'); return { h: s.getBoundingClientRect().height, overflow: document.documentElement.scrollWidth - innerWidth }; });
+    assert(r.h <= 16, `subtitle one line at ${w}px (height ${r.h})`); assert(r.overflow <= 0, `no overflow at ${w}px`); await c.close();
+  }
+});
+await test('G: no colour-contrast (or other WCAG A/AA) failures on main pages', async () => {
+  const AXE = fs.readFileSync(path.join(ROOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
+  const c = await browser.newContext({ viewport: { width: 1280, height: 900 }, bypassCSP: true }); const p = await c.newPage(); const bad = [];
+  for (const r of ['/', '/services', '/services/iphone-screen-replacement', '/repair-prices', '/book', '/sell', '/shop', '/contact', '/faq', '/admin']) {
+    await p.goto(BASE + r, { waitUntil: 'networkidle' }); await p.evaluate(() => document.querySelectorAll('.reveal').forEach((e) => e.classList.add('in'))); await p.waitForTimeout(700);
+    await p.addScriptTag({ content: AXE });
+    const v = await p.evaluate(async () => (await axe.run(document, { runOnly: ['wcag2a', 'wcag2aa'] })).violations.map((x) => `${x.id}(${x.nodes.length})`));
+    if (v.length) bad.push(`${r}: ${v.join(', ')}`);
+  }
+  eq(bad.length, 0, bad.join(' | ')); await c.close();
+});
+await test('E: hero text migration updates old default copy but keeps owner-edited text', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const run = (dir, js) => execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e', js], { cwd: ROOT, env: { ...process.env, DATA_DIR: dir, ADMIN_PASSWORD: 'x-unused-123' }, encoding: 'utf8' }).trim().split('\n').pop();
+  for (const [title, expected] of [['Professional Phone Repair in Keswick, Ontario', 'Phone repair in Keswick — fixed fast, priced upfront.'], ['My own headline', 'My own headline']]) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'au-mig-'));
+    run(dir, `const m = await import('./server/db.js'); await m.ready; await m.setSetting('content', { ...m.getSetting('content'), hero_title: ${JSON.stringify(title)} }); await m.setSetting('schema_version', 1); console.log('ok');`);
+    const out = run(dir, "const m = await import('./server/db.js'); await m.ready; console.log(m.getSetting('content').hero_title);");
+    eq(out, expected, 'after migration'); fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 console.log('\nLinks, images, contact buttons, responsiveness');

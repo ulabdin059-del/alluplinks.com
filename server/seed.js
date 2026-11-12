@@ -38,9 +38,10 @@ export const DEFAULT_SETTINGS = {
   hours: STORE_HOURS,
   content: {
     announcement: 'Upfront, model-specific repair prices in CAD — book your repair online in under two minutes.',
-    hero_eyebrow: 'Keswick · Georgina · York Region',
-    hero_title: 'Professional Phone Repair in Keswick, Ontario',
-    hero_subtitle: 'Cracked screen, tired battery or a phone that won’t charge? All Uplinks repairs iPhone, Samsung, Google Pixel, iPad, laptops and game consoles at our Queensway South store — with clear prices before any work begins.',
+    announcement_short: 'Upfront prices · Book online',
+    hero_eyebrow: 'Keswick, Ontario',
+    hero_title: 'Phone repair in Keswick — fixed fast, priced upfront.',
+    hero_subtitle: 'Screens, batteries, charging ports and more for iPhone, Samsung, Google Pixel, iPad, laptops and game consoles. See your exact price online, then book a time at our Queensway South store.',
     about_title: 'A local repair shop that respects your time and your device',
     about_body: 'All Uplinks is a Keswick repair store on The Queensway South. We fix phones, tablets, laptops and consoles, buy and trade in used devices, and stock the accessories that keep them protected and charged. Every price on this site is specific to your model, so you know what to expect before you walk in.',
     cta_title: 'Ready to get your device working again?',

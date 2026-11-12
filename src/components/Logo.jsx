@@ -16,9 +16,9 @@ export default function Logo({ className = '' }) {
         <rect width="40" height="40" rx="11" fill="#c8102e" />
         <g transform="translate(7.2 6.4) scale(.256)"><path d={LEAF_PATH} fill="#fff" /></g>
       </svg>
-      <span className="leading-none">
+      <span className="whitespace-nowrap leading-none">
         <span className="block font-display text-[19px] font-extrabold tracking-tight text-ink">All Uplinks</span>
-        <span className="mt-0.5 block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-400">Phone Repair · Keswick</span>
+        <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-400 min-[380px]:text-[10.5px] min-[380px]:tracking-[0.14em]">Phone Repair · Keswick</span>
       </span>
     </span>
   );

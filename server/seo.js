@@ -1,5 +1,6 @@
 // Server-rendered <head> metadata, JSON-LD and crawlable fallback content for every public route.
 import { db, j as parseJson, getSetting } from './db.js';
+import { renderShell } from './shell.js';
 // Accepts either a JSON string (raw row) or an already-parsed value (cached row).
 const j = (v, f) => (typeof v === 'string' ? parseJson(v, f) : v ?? f);
 import { SHOP_CATEGORIES, SHOP_BRANDS } from '../shared/constants.js';
@@ -142,15 +143,15 @@ export async function renderPage(pathname, template, preload) {
     '<meta name="geo.region" content="CA-ON">', `<meta name="geo.placename" content="${esc(b.city)}">`,
     ...(m.ld || []).map(ld)
   ].filter(Boolean).join('\n    ');
-  const body = `<main class="seo-fallback" style="max-width:960px;margin:0 auto;padding:32px 16px;font-family:system-ui,sans-serif;color:#0f1d3a">
-<h1>${esc(m.h1)}</h1>${m.intro ? `<p>${esc(m.intro)}</p>` : ''}
-<p><strong>${esc(b.legal_name)}</strong> — ${esc(b.street)}, ${esc(b.city)}, ${esc(b.region_name)}. Call <a href="tel:${esc(b.phone_tel)}">${esc(b.phone_display)}</a>.</p>
-<nav aria-label="Site"><ul>${[['Home', '/'], ['Repair prices', '/repair-prices'], ['Book a repair', '/book'], ['Sell / Trade-in', '/sell'], ['Shop', '/shop'], ['Contact', '/contact'], ...(m.links || [])]
-    .map(([n, h]) => `<li><a href="${esc(h)}">${esc(n)}</a></li>`).join('')}</ul></nav></main>`;
+  const site_data = preload.site;
+  const body = renderShell({ business: b, content: getSetting('content') || {}, hours: getSetting('hours') || [], m, isHome: (pathname.replace(/\/+$/, '') || '/') === '/' });
+  // Store settings the app needs on its first render, so it never shows placeholder text (not executed: type is JSON).
+  const boot = site_data ? `<script type="application/json" id="__SITE__">${JSON.stringify(site_data).replace(/</g, '\\u003c')}</script>` : '';
   const html = template
     .replace(/<title>[\s\S]*?<\/title>/, '')
     .replace('<!--app-head-->', head)
-    .replace('<!--app-body-->', body);
+    .replace('<!--app-body-->', body)
+    .replace('</body>', `${boot}\n  </body>`);
   return { status, html };
 }
 

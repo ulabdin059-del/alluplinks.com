@@ -615,7 +615,8 @@ if (fs.existsSync(DIST)) {
   app.use(express.static(DIST, { index: false, maxAge: '7d' }));
   const template = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8');
   app.get('/{*splat}', wrap(async (req, res) => {
-    const page = await renderPage(req.path, template, { services: await servicesAll(), products: await productsAll() });
+    const [services, products, site] = await Promise.all([servicesAll(), productsAll(), publicSite()]);
+    const page = await renderPage(req.path, template, { services, products, site });
     res.status(page.status).type('html').send(page.html);
   }));
 }
