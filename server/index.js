@@ -166,7 +166,8 @@ const productsAll = () => cached('products', async () => (await db.all('SELECT *
 async function publicSite() {
   const [faqs, reviews, services] = await Promise.all([
     cached('faqs', () => db.all("SELECT id, question, answer FROM faqs WHERE active = 1 AND page = 'general' ORDER BY sort, id")),
-    cached('reviews', () => db.all('SELECT id, name, rating, text, device, source, created_at FROM reviews WHERE approved = 1 ORDER BY created_at DESC LIMIT 24')),
+    // Google reviews first (in the admin's chosen order), then approved website reviews, newest first.
+    cached('reviews', () => db.all("SELECT id, name, rating, text, device, source, link, review_date, created_at FROM reviews WHERE approved = 1 ORDER BY CASE WHEN lower(source) = 'google' THEN 0 ELSE 1 END, sort, created_at DESC LIMIT 24")),
     servicesAll()
   ]);
   return {
@@ -442,7 +443,7 @@ const TABLES = {
   services: { cols: ['slug', 'name', 'short', 'description', 'benefits', 'image', 'image_alt', 'price_source', 'price_note', 'time_estimate', 'warranty', 'faqs', 'meta_title', 'meta_description', 'featured', 'sort', 'active'], json: ['benefits', 'price_source', 'faqs'], order: 'sort, id' },
   products: { cols: ['slug', 'name', 'category', 'brand', 'condition', 'price', 'compare_at', 'images', 'short', 'description', 'specs', 'featured', 'sort', 'active'], json: ['images', 'specs'], order: 'sort, id', filters: ['category'] },
   faqs: { cols: ['question', 'answer', 'page', 'sort', 'active'], order: 'page, sort, id' },
-  reviews: { cols: ['name', 'rating', 'text', 'device', 'source', 'approved'], order: 'id DESC' },
+  reviews: { cols: ['name', 'rating', 'text', 'device', 'source', 'approved', 'link', 'review_date', 'sort'], order: 'sort, id DESC' },
   tradein_devices: { cols: ['device_type', 'brand', 'model', 'base_value', 'storages', 'sort', 'active'], json: ['storages'], order: 'device_type, brand, sort, id', filters: ['device_type', 'brand'] },
   blocked_dates: { cols: ['date', 'reason'], order: 'date' }
 };

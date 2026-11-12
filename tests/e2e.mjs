@@ -265,7 +265,7 @@ await test('Store hours shown on contact page; Google reviews link present', asy
   const p = await newPage(); await p.goto(BASE + '/contact', { waitUntil: 'networkidle' });
   assert(await p.getByText('9 a.m. – 5 p.m.').first().isVisible(), 'weekday hours'); assert(await p.getByText('10 a.m. – 4 p.m.').first().isVisible(), 'weekend hours');
   await p.goto(BASE + '/', { waitUntil: 'networkidle' });
-  eq(await p.getByRole('link', { name: /reviews on Google|Google reviews/ }).first().getAttribute('href'), 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); await p.close();
+  eq(await p.getByRole('link', { name: /Read All Google Reviews/ }).first().getAttribute('href'), 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); await p.close();
 });
 await test('Blocked date removes all slots', async () => {
   const d = await tomorrowOpen(); const r = await adminFetch('/t/blocked_dates', { method: 'POST', data: { date: d, reason: 'Holiday' } });
@@ -407,6 +407,56 @@ await test('E: hero text migration updates old default copy but keeps owner-edit
     const out = run(dir, "const m = await import('./server/db.js'); await m.ready; console.log(m.getSetting('content').hero_title);");
     eq(out, expected, 'after migration'); fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+console.log('\nGoogle reviews section');
+await test('Reviews: buttons use the configured Google links; no review cards without real data', async () => {
+  // Hide the website review published earlier in this run, so the section has no reviews at all.
+  for (const r of (await adminFetch('/t/reviews')).body) await adminFetch('/t/reviews/' + r.id, { method: 'PUT', data: { approved: 0 } });
+  const p = await newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+  eq(await p.locator('[data-review]').count(), 0, 'no cards when there are no approved reviews');
+  eq(await p.getByRole('link', { name: 'Read All Google Reviews' }).getAttribute('href'), 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8');
+  eq(await p.getByRole('link', { name: 'Leave Us a Google Review' }).getAttribute('href'), 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8', 'falls back to reviews page');
+  const biz = (await adminFetch('/settings')).body.business;
+  await adminFetch('/settings/business', { method: 'PUT', data: { ...biz, google_write_review_url: 'https://g.page/r/TEST-ONLY/review' } });
+  await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+  eq(await p.getByRole('link', { name: 'Leave Us a Google Review' }).getAttribute('href'), 'https://g.page/r/TEST-ONLY/review', 'uses write-review link when set');
+  await adminFetch('/settings/business', { method: 'PUT', data: biz }); await p.close();
+});
+await test('Reviews: Google reviews show first with name, date, stars, Google mark and their own link', async () => {
+  const add = async (d) => (await adminFetch('/t/reviews', { method: 'POST', data: { approved: 1, ...d } })).body;
+  const g2 = await add({ name: 'TEST Reviewer Two', rating: 4, text: 'TEST ONLY second google entry.', source: 'Google', review_date: 'TEST date 2', link: 'https://example.com/test-review-2', sort: 2 });
+  const g1 = await add({ name: 'TEST Reviewer One', rating: 5, text: 'TEST ONLY '.repeat(40), source: 'Google', review_date: 'TEST date 1', link: 'https://example.com/test-review-1', sort: 1 });
+  const w = await add({ name: 'TEST Website Person', rating: 5, text: 'TEST ONLY website entry here.', source: 'website' });
+  const site = (await json('/api/site')).body; eq(site.reviews.map((r) => r.name).join('|'), 'TEST Reviewer One|TEST Reviewer Two|TEST Website Person', 'Google first, by display order');
+  const p = await newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' }); await p.evaluate(() => document.querySelectorAll('.reveal').forEach((e) => e.classList.add('in')));
+  const cards = p.locator('[data-review]'); eq(await cards.count(), 3);
+  const first = cards.first(); eq(await first.getAttribute('data-review'), 'google');
+  assert((await first.textContent()).includes('TEST date 1'), 'date shown');
+  eq(await first.getByRole('link', { name: /View on Google/ }).getAttribute('href'), 'https://example.com/test-review-1');
+  eq(await first.getByRole('img', { name: '5 out of 5 stars' }).count(), 1, 'star rating');
+  await first.getByRole('button', { name: 'Read more' }).click(); await first.getByRole('button', { name: 'Show less' }).waitFor();
+  eq(await cards.nth(2).getAttribute('data-review'), 'website'); eq(await cards.nth(2).getByRole('link', { name: /View on Google/ }).count(), 0, 'no Google link on website review');
+  assert((await p.locator('main').textContent()).includes('4.5'), 'average of the Google reviews (5 + 4) / 2');
+  await p.close();
+  // Phone: horizontal swipe row; desktop: grid
+  const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true }); const mp = await m.newPage(); await mp.goto(BASE + '/', { waitUntil: 'networkidle' });
+  const row = await mp.evaluate(() => { const l = document.querySelector('[aria-label="Customer reviews"]'); return { scroll: l.scrollWidth > l.clientWidth + 50, overflow: document.documentElement.scrollWidth - innerWidth }; });
+  assert(row.scroll, 'swipeable on phones'); assert(row.overflow <= 0, 'page itself does not scroll sideways'); await m.close();
+  for (const r of [g1, g2, w]) await adminFetch('/t/reviews/' + r.id, { method: 'DELETE' });
+});
+await test('Reviews: databases created before this change gain the new review fields without losing reviews', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'au-rev-'));
+  const env = { ...process.env, DATA_DIR: dir, ADMIN_PASSWORD: 'x-unused-123' };
+  execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e', `import { createClient } from '@libsql/client';
+    const c = createClient({ url: 'file:${dir.replace(/\\/g, '/')}/alluplinks.db' });
+    await c.execute("CREATE TABLE reviews (id INTEGER PRIMARY KEY, name TEXT NOT NULL, rating INTEGER NOT NULL, text TEXT NOT NULL, device TEXT, source TEXT DEFAULT 'website', approved INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))");
+    await c.execute("INSERT INTO reviews(name,rating,text,approved) VALUES('Old row',5,'kept text',1)");`], { cwd: ROOT, env });
+  const out = execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e', "const m = await import('./server/db.js'); await m.ready; const cols = (await m.db.all('PRAGMA table_info(reviews)')).map((c) => c.name); const r = await m.db.get('SELECT * FROM reviews'); console.log(JSON.stringify({ cols, name: r.name, text: r.text }));"], { cwd: ROOT, env, encoding: 'utf8' });
+  const res = JSON.parse(out.trim().split('\n').pop());
+  for (const c of ['link', 'review_date', 'sort']) assert(res.cols.includes(c), 'column ' + c);
+  eq(res.name, 'Old row'); eq(res.text, 'kept text'); fs.rmSync(dir, { recursive: true, force: true });
 });
 
 console.log('\nLinks, images, contact buttons, responsiveness');

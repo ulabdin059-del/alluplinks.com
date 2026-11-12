@@ -48,7 +48,7 @@ export function ReviewsAdmin() {
   const pending = (data || []).filter((r) => !r.approved);
   return (
     <div>
-      <PageTitle title="Reviews">Reviews submitted on the website are held for approval. Only publish genuine customer reviews.</PageTitle>
+      <PageTitle title="Reviews">Only publish genuine customer reviews. Google reviews appear first on the website, with Google branding and a “View on Google” link. Website submissions are held here for approval.</PageTitle>
       {pending.length > 0 && (
         <div className="mb-8 space-y-3">
           <h2 className="font-bold">Awaiting approval ({pending.length})</h2>
@@ -62,8 +62,12 @@ export function ReviewsAdmin() {
       )}
       <ResourceEditor table="reviews" singular="review" searchKeys={['name', 'text']}
         fields={[{ name: 'name', label: 'Customer name', required: true }, { name: 'rating', label: 'Rating', type: 'select', options: [[5, '5'], [4, '4'], [3, '3'], [2, '2'], [1, '1']], numeric: true, required: true },
-          { name: 'text', label: 'Review', type: 'textarea', required: true, full: true }, { name: 'device', label: 'Device / repair' }, { name: 'source', label: 'Source', placeholder: 'e.g. Google, in store' }, { name: 'approved', label: 'Published', type: 'bool' }]}
-        defaults={{ rating: 5, approved: 1, source: 'Google' }}
+          { name: 'text', label: 'Review', type: 'textarea', required: true, full: true, hint: 'Copy the text exactly as it appears on Google.' },
+          { name: 'source', label: 'Source', type: 'select', required: true, options: [['Google', 'Google'], ['website', 'Website'], ['in store', 'In store']] },
+          { name: 'review_date', label: 'Date shown on Google', placeholder: 'e.g. 3 weeks ago or October 2026' },
+          { name: 'link', label: 'Google review link', placeholder: 'https://maps.app.goo.gl/…', full: true, hint: 'Google → your business → Reviews → the review’s ⋮ menu → Share review → Copy link.' },
+          { name: 'device', label: 'Device / repair (optional)' }, { name: 'sort', label: 'Display order', type: 'number', hint: 'Lower numbers appear first.' }, { name: 'approved', label: 'Published', type: 'bool' }]}
+        defaults={{ rating: 5, approved: 1, source: 'Google', sort: 0 }}
         columns={[{ key: 'name', label: 'Name' }, { key: 'rating', label: 'Rating', render: (r) => '★'.repeat(r.rating) }, { key: 'text', label: 'Review', render: (r) => <span className="line-clamp-2 max-w-md">{r.text}</span> }, { key: 'approved', label: 'Status', render: (r) => (r.approved ? <Badge tone="green">Live</Badge> : <Badge tone="amber">Pending</Badge>) }]} />
     </div>
   );
@@ -117,7 +121,9 @@ export function SettingsAdmin() {
         fields={[{ name: 'name', label: 'Business name' }, { name: 'legal_name', label: 'Full store name' }, { name: 'street', label: 'Street address' }, { name: 'city', label: 'City' },
           { name: 'region', label: 'Province code' }, { name: 'region_name', label: 'Province' }, { name: 'postal_code', label: 'Postal code', hint: 'Optional — add once confirmed.' }, { name: 'country', label: 'Country code' },
           { name: 'phone_display', label: 'Phone (display)' }, { name: 'phone_tel', label: 'Phone (tel: link)', hint: 'E.164 format, e.g. +19055359503' }, { name: 'email', label: 'Public email (optional)', hint: 'Also receives admin notifications if ADMIN_NOTIFY_EMAIL isn’t set.' },
-          { name: 'site_url', label: 'Website URL' }, { name: 'maps_query', label: 'Google Maps search text', full: true }, { name: 'google_review_url', label: 'Google review link (optional)', full: true }]} />
+          { name: 'site_url', label: 'Website URL' }, { name: 'maps_query', label: 'Google Maps search text', full: true },
+          { name: 'google_review_url', label: 'Google reviews page link (“Read All Google Reviews”)', full: true },
+          { name: 'google_write_review_url', label: '“Leave Us a Google Review” link', full: true, hint: 'Google Business Profile → Ask for reviews → copy the share link (looks like https://g.page/r/…/review). Until set, the reviews page link is used.' }]} />
       <HoursCard value={data.hours} onSave={put('hours')} />
       <SettingsCard title="Website content" value={data.content} onSave={put('content')}
         fields={[{ name: 'announcement', label: 'Announcement bar', full: true, hint: 'Leave empty to hide.' }, { name: 'hero_eyebrow', label: 'Hero label' }, { name: 'hero_title', label: 'Hero headline' },

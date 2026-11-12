@@ -221,7 +221,7 @@ export default function Home() {
             <SectionHeading eyebrow={<><Star className="h-3.5 w-3.5" aria-hidden="true" />Customer reviews</>} title="What our customers say" />
             <Link to="/reviews" className="btn-outline reveal shrink-0">All reviews<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
-          <div className="mt-10"><ReviewsSection limit={3} /></div>
+          <div className="mt-10"><ReviewsSection limit={6} /></div>
         </div>
       </section>
       <SellShop />

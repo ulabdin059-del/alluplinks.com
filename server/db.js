@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS faqs (
 CREATE TABLE IF NOT EXISTS reviews (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
   text TEXT NOT NULL, device TEXT, source TEXT DEFAULT 'website', approved INTEGER DEFAULT 0,
+  link TEXT, review_date TEXT, sort INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY, kind TEXT, title TEXT, body TEXT, link TEXT, read INTEGER DEFAULT 0,
@@ -259,9 +260,19 @@ export async function importAll(backup) {
   await loadSettings();
 }
 
+// Adds columns introduced after a database was created (SQLite ALTER TABLE only adds; nothing is removed).
+const ADDED_COLUMNS = { reviews: [['link', 'TEXT'], ['review_date', 'TEXT'], ['sort', 'INTEGER DEFAULT 0']] };
+async function addMissingColumns() {
+  for (const [table, cols] of Object.entries(ADDED_COLUMNS)) {
+    const have = new Set((await db.all(`PRAGMA table_info(${table})`)).map((c) => c.name));
+    for (const [name, type] of cols) if (!have.has(name)) await client.execute(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+  }
+}
+
 export const ready = (async () => {
   if (DB_KIND === 'local') await client.execute('PRAGMA journal_mode = WAL').catch(() => {});
   await client.executeMultiple(SCHEMA);
+  await addMissingColumns();
   await loadSettings();
   const seeded = await seedIfEmpty();
   if (seeded) await loadSettings();
