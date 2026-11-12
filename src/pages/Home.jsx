@@ -1,15 +1,18 @@
 import { Link } from 'react-router-dom';
 import { Phone, CalendarCheck, ArrowRight, BadgeDollarSign, Timer, Wrench, ShieldCheck, MapPin, Smartphone, Cpu, Recycle, ClipboardCheck, PackageCheck, Search, Star } from 'lucide-react';
 import { useSite, useCatalog, useSeo } from '../lib/site.jsx';
-import { useReveal, useFetch, telHref, money } from '../lib/utils.js';
+import { useReveal, useFetch, telHref, money, storeStatus } from '../lib/utils.js';
 import { api } from '../lib/api.js';
 import { Img, SectionHeading, Accordion, LocationCard } from '../components/ui.jsx';
 import PriceCalculator from '../components/PriceCalculator.jsx';
+import { DevicesGrid, PopularPrices } from '../components/HomeSections.jsx';
+import { MapleLeaf } from '../components/Logo.jsx';
 import ServiceCard from '../components/ServiceCard.jsx';
 import ReviewsSection from '../components/Reviews.jsx';
 
 function Hero() {
-  const { business: b, content } = useSite();
+  const { business: b, content, hours } = useSite();
+  const status = storeStatus(hours);
   const { catalog } = useCatalog();
   const sample = (() => {
     const m = catalog?.categories.find((c) => c.slug === 'iphone')?.brands[0]?.models.find((x) => x.name === 'iPhone 15');
@@ -20,7 +23,10 @@ function Hero() {
       <div className="bg-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden="true" />
       <div className="container-x relative grid items-center gap-12 pb-16 pt-10 sm:pt-14 lg:grid-cols-[1.05fr_.95fr] lg:pb-24 lg:pt-20">
         <div className="animate-fade-up">
-          <span className="eyebrow"><MapPin className="h-3.5 w-3.5" aria-hidden="true" />{content.hero_eyebrow || 'Keswick, Ontario'}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="eyebrow"><MapleLeaf className="h-3.5 w-3.5" />{content.hero_eyebrow || 'Keswick, Ontario'}</span>
+            {status && <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-600 ring-1 ring-mist-200"><span className={status.open ? 'h-2 w-2 rounded-full bg-emerald-500' : 'h-2 w-2 rounded-full bg-ink-300'} aria-hidden="true" />{status.label}</span>}
+          </div>
           <h1 className="mt-5 text-[2.6rem] font-extrabold leading-[1.04] sm:text-6xl lg:text-[4.1rem]">
             {(content.hero_title || 'Professional Phone Repair in Keswick, Ontario').replace(/ in Keswick, Ontario$/, '')}
             {/ in Keswick, Ontario$/.test(content.hero_title || 'Professional Phone Repair in Keswick, Ontario') && <span className="block text-brand-600"> in Keswick, Ontario</span>}
@@ -84,10 +90,12 @@ function PopularServices() {
           <SectionHeading eyebrow="Popular repairs" title="The repairs Keswick brings us most">Clear, model-specific pricing on every common repair — tap a service for full details and prices.</SectionHeading>
           <Link to="/services" className="btn-outline reveal shrink-0">All 18 services<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         </div>
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {featured.length ? featured.map((s) => <ServiceCard key={s.slug} s={s} catalog={catalog} />)
-            : Array.from({ length: 8 }).map((_, i) => <div key={i} className="card h-80 animate-pulse bg-mist-100" />)}
+        {/* Swipeable row on phones, grid from tablet up */}
+        <div className="-mx-4 mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 no-scrollbar sm:mx-0 sm:mt-12 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
+          {featured.length ? featured.map((s) => <div key={s.slug} className="flex w-[78%] shrink-0 snap-start sm:w-auto"><ServiceCard s={s} catalog={catalog} /></div>)
+            : Array.from({ length: 8 }).map((_, i) => <div key={i} className="card h-80 w-[78%] shrink-0 animate-pulse bg-mist-100 sm:w-auto" />)}
         </div>
+        <p className="mt-2 text-center text-xs text-ink-400 sm:hidden">Swipe to see more repairs →</p>
       </div>
     </section>
   );
@@ -145,26 +153,24 @@ function Process() {
     [PackageCheck, 'Repair & test', 'Your device is repaired, tested function by function, and handed back ready to go.']
   ];
   return (
-    <section className="section bg-ink text-white">
-      <div className="container-x">
-        <div className="reveal mx-auto max-w-2xl text-center">
-          <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-200 ring-1 ring-inset ring-white/15">How it works</span>
-          <h2 className="h-section mt-4 text-white">How our repair process works</h2>
-          <p className="mt-4 text-base leading-relaxed text-white/70 sm:text-lg">Four simple steps from cracked to fixed.</p>
-        </div>
-        <ol className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="section relative overflow-hidden bg-gradient-to-b from-brand-50/60 via-white to-white">
+      <MapleLeaf className="pointer-events-none absolute -right-24 -top-16 h-[420px] w-[420px] text-brand-100/60" />
+      <div className="container-x relative">
+        <SectionHeading eyebrow="How it works" title="How our repair process works" center>Four simple steps from cracked to fixed.</SectionHeading>
+        <ol className="relative mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <span className="absolute left-[12%] right-[12%] top-[52px] hidden h-px border-t-2 border-dashed border-brand-200 lg:block" aria-hidden="true" />
           {steps.map(([I, t, d], i) => (
-            <li key={t} className="reveal relative rounded-2xl bg-white/[0.04] p-6 ring-1 ring-white/10 transition hover:bg-white/[0.07]">
-              <span className="font-display text-5xl font-extrabold text-white/10">0{i + 1}</span>
-              <span className="mt-2 grid h-11 w-11 place-items-center rounded-xl bg-brand-500/20 ring-1 ring-brand-400/30"><I className="h-5 w-5 text-brand-300" aria-hidden="true" /></span>
-              <h3 className="mt-4 text-lg font-bold text-white">{t}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-white/65">{d}</p>
+            <li key={t} className="reveal card relative p-6 text-center">
+              <span className="relative mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600 text-white shadow-lift ring-8 ring-white"><I className="h-6 w-6" aria-hidden="true" /></span>
+              <span className="mt-4 block text-xs font-bold uppercase tracking-widest text-brand-600">Step {i + 1}</span>
+              <h3 className="mt-1 text-lg font-bold">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-500">{d}</p>
             </li>
           ))}
         </ol>
         <div className="reveal mt-12 flex flex-wrap justify-center gap-3">
-          <Link to="/book" className="btn btn-lg bg-white text-ink hover:bg-brand-50"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
-          <Link to="/repair-prices" className="btn btn-lg text-white ring-1 ring-inset ring-white/25 hover:bg-white/10">Check prices</Link>
+          <Link to="/book" className="btn-primary btn-lg"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
+          <Link to="/repair-prices" className="btn-outline btn-lg">Check prices</Link>
         </div>
       </div>
     </section>
@@ -202,7 +208,9 @@ export default function Home() {
     <div ref={ref}>
       <Hero />
       <BrandStrip />
+      <DevicesGrid />
       <PopularServices />
+      <PopularPrices />
       <CalculatorSection />
       <WhyUs />
       <Process />

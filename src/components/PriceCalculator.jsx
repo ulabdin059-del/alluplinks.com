@@ -97,6 +97,7 @@ export default function PriceCalculator({ syncUrl = false, headingLevel = 'h2' }
           {step > 0 && (
             <div className="mb-5 flex flex-wrap items-center gap-2">
               <button type="button" onClick={back} className="btn-ghost btn-sm -ml-2"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Back</button>
+              {cat && <img src={imgSrc(cat.image, 640)} alt="" className="h-8 w-8 rounded-lg object-cover ring-1 ring-mist-200 lg:hidden" />}
               {cat && <span className="chip">{cat.name}</span>}
               {brand && cat.brands.length > 1 && <span className="chip">{brand.name}</span>}
               {sel.model && <span className="chip">{sel.model}</span>}
@@ -217,6 +218,13 @@ export default function PriceCalculator({ syncUrl = false, headingLevel = 'h2' }
 
         {/* Summary */}
         <aside className="hidden border-l border-mist-200 bg-gradient-to-b from-brand-50/60 to-white p-8 lg:block" aria-label="Your selection">
+          {cat ? (
+            <img key={cat.slug} src={imgSrc(cat.image, 640)} alt={`${cat.name} repair`} className="mb-6 aspect-[16/10] w-full animate-fade-in rounded-2xl object-cover ring-1 ring-mist-200" />
+          ) : (
+            <div className="mb-6 grid aspect-[16/10] w-full grid-cols-3 grid-rows-3 gap-1 overflow-hidden rounded-2xl" aria-hidden="true">
+              {catalog.categories.slice(0, 9).map((c) => <img key={c.slug} src={imgSrc(c.image, 640)} alt="" className="h-full min-h-0 w-full object-cover" loading="lazy" />)}
+            </div>
+          )}
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">Your repair</p>
           <dl className="mt-5 space-y-4 text-sm">
             {[['Device', cat?.name], ['Brand', brand?.name], ['Model', sel.model], ['Repair', repair?.name]].map(([k, v]) => (

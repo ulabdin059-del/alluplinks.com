@@ -330,6 +330,15 @@ await test('All images load, have alt attributes, and pages have no horizontal s
   }
   await m.close();
 });
+await test('Mobile menu opens full-screen, links work, and closes', async () => {
+  const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }); const p = await newPage(m);
+  await p.goto(BASE + '/', { waitUntil: 'networkidle' }); await p.getByRole('button', { name: 'Open menu' }).click();
+  const dlg = p.getByRole('dialog', { name: 'Menu' }); await dlg.waitFor();
+  const box = await dlg.boundingBox(); assert(box.height >= 800, 'menu covers screen, height ' + box.height);
+  await dlg.getByRole('link', { name: 'Prices' }).click(); await p.waitForURL(/\/repair-prices/); eq(await dlg.count(), 0, 'menu closed after navigation');
+  await p.getByRole('button', { name: 'Open menu' }).click(); await p.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: 'Close menu' }).click(); eq(await p.getByRole('dialog', { name: 'Menu' }).count(), 0, 'close button');
+  await m.close();
+});
 await test('Every service uses a distinct image file', async () => { eq(new Set(services.map((s) => s.image)).size, 18); });
 await test('No JavaScript console errors on any page', async () => { eq(consoleErrors.length, 0, consoleErrors.slice(0, 5).join('\n')); });
 await test('Performance: home HTML < 30 KB, JS on first load < 120 KB gzip, images WebP', async () => {

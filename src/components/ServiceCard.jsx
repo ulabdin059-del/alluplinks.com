@@ -18,7 +18,7 @@ export function fromPrice(service, catalog) {
 export default function ServiceCard({ s, catalog }) {
   const from = fromPrice(s, catalog);
   return (
-    <Link to={`/services/${s.slug}`} className="reveal card card-hover group flex flex-col overflow-hidden">
+    <Link to={`/services/${s.slug}`} className="reveal card card-hover group flex w-full flex-col overflow-hidden">
       <div className="relative overflow-hidden">
         <Img k={s.image} alt={s.image_alt || s.name} className="aspect-[16/10] w-full transition duration-700 group-hover:scale-[1.04]" sizes="(min-width:1024px) 25vw, (min-width:640px) 50vw, 100vw" />
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">

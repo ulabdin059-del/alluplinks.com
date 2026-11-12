@@ -29,11 +29,19 @@ export default function Services() {
         actions={<><Link to="/repair-prices" className="btn-primary btn-lg"><Calculator className="h-5 w-5" aria-hidden="true" />Check your price</Link><Link to="/book" className="btn-outline btn-lg"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a repair</Link></>}>
         From a cracked iPhone screen to a PS5 HDMI port, here’s everything we repair at our Keswick store. Tap any service for details, model-by-model prices and estimated repair times.
       </PageHero>
+      <nav aria-label="Service categories" className="sticky top-[72px] z-20 border-b border-mist-200 bg-white/90 backdrop-blur">
+        <div className="container-x flex gap-2 overflow-x-auto py-3 no-scrollbar">
+          {grouped.filter(([, l]) => l.length).map(([title]) => (
+            <a key={title} href={`#${title.replace(/[^a-z]+/gi, '-').toLowerCase()}`} className="shrink-0 rounded-full bg-mist-100 px-4 py-2 text-sm font-semibold text-ink-600 transition hover:bg-brand-50 hover:text-brand-700">{title}</a>
+          ))}
+          <Link to="/repair-prices" className="shrink-0 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Price calculator</Link>
+        </div>
+      </nav>
       <div className="container-x space-y-16 py-16">
         {!data && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="card h-80 animate-pulse bg-mist-100" />)}</div>}
         {grouped.filter(([, l]) => l.length).map(([title, list]) => (
-          <section key={title} aria-labelledby={title}>
-            <h2 id={title} className="reveal text-2xl font-extrabold">{title}</h2>
+          <section key={title} id={title.replace(/[^a-z]+/gi, '-').toLowerCase()} className="scroll-mt-40" aria-label={title}>
+            <h2 className="reveal flex items-center gap-3 text-2xl font-extrabold"><span className="h-6 w-1.5 rounded-full bg-brand-600" aria-hidden="true" />{title}<span className="text-base font-semibold text-ink-400">{list.length}</span></h2>
             <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{list.map((s) => <ServiceCard key={s.slug} s={s} catalog={catalog} />)}</div>
           </section>
         ))}

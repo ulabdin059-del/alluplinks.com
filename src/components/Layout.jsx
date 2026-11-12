@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Menu, X, Phone, ChevronDown, CalendarCheck, MapPin, ArrowRight, Megaphone } from 'lucide-react';
-import Logo from './Logo.jsx';
+import { Menu, X, Phone, ChevronDown, CalendarCheck, MapPin, ArrowRight } from 'lucide-react';
+import Logo, { MapleLeaf } from './Logo.jsx';
 import { useSite } from '../lib/site.jsx';
-import { cx, telHref, mapsDirections, imgSrc } from '../lib/utils.js';
+import { cx, telHref, mapsDirections, imgSrc, storeStatus } from '../lib/utils.js';
 import { Hours } from './ui.jsx';
 import { SHOP_CATEGORIES } from '../../shared/constants.js';
 
@@ -16,14 +17,20 @@ const NAV = [
 ];
 
 function Announcement() {
-  const { content } = useSite();
-  if (!content?.announcement) return <div className="h-0" />;
+  const { content, hours, business } = useSite();
+  const status = storeStatus(hours);
   return (
     <div className="bg-ink text-white">
-      <div className="container-x flex items-center justify-center gap-2 py-2 text-center text-[13px] font-medium">
-        <Megaphone className="hidden h-4 w-4 text-brand-300 sm:block" aria-hidden="true" />
-        <span>{content.announcement}</span>
-        <Link to="/repair-prices" className="ml-1 hidden items-center gap-1 font-semibold text-brand-300 hover:text-white sm:inline-flex">Check your price <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+      <div className="container-x flex items-center justify-between gap-4 py-2 text-[13px] font-medium">
+        <p className="flex min-w-0 items-center gap-2">
+          <MapleLeaf className="h-3.5 w-3.5 shrink-0 text-brand-400" />
+          <span className="truncate">{content?.announcement || 'Model-specific repair prices in CAD — book online.'}</span>
+          <Link to="/repair-prices" className="ml-1 hidden shrink-0 items-center gap-1 font-semibold text-brand-300 hover:text-white md:inline-flex">Check your price <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+        </p>
+        <div className="hidden shrink-0 items-center gap-5 lg:flex">
+          {status && <span className="inline-flex items-center gap-2"><span className={cx('h-2 w-2 rounded-full', status.open ? 'bg-emerald-400' : 'bg-white/40')} aria-hidden="true" />{status.label}</span>}
+          <a href={mapsDirections(business)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-white/80 hover:text-white"><MapPin className="h-3.5 w-3.5" aria-hidden="true" />{business.street}, {business.city}</a>
+        </div>
       </div>
     </div>
   );
@@ -57,7 +64,8 @@ function MegaMenu({ onNavigate }) {
 }
 
 function Header() {
-  const { business } = useSite();
+  const { business, hours, services } = useSite();
+  const mobileStatus = storeStatus(hours);
   const [open, setOpen] = useState(false);
   const [mega, setMega] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -100,20 +108,36 @@ function Header() {
           </button>
         </div>
       </div>
-      {open && (
-        <div id="mobile-nav" className="fixed inset-x-0 bottom-0 top-[72px] z-40 overflow-y-auto bg-white animate-fade-in lg:hidden">
+      {/* Rendered into <body>: the header's backdrop blur would otherwise trap a fixed-position panel inside it. */}
+      {open && createPortal(
+        <div id="mobile-nav" role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-50 overflow-y-auto bg-white animate-fade-in lg:hidden">
+          <div className="container-x flex h-[72px] items-center justify-between border-b border-mist-200">
+            <Link to="/" aria-label="All Uplinks home" onClick={() => setOpen(false)}><Logo /></Link>
+            <button type="button" className="btn-ghost px-2.5" aria-label="Close menu" onClick={() => setOpen(false)}><X className="h-6 w-6" /></button>
+          </div>
           <nav aria-label="Mobile" className="container-x flex flex-col gap-1 py-6">
+            {mobileStatus && <p className="mb-3 inline-flex items-center gap-2 self-start rounded-full bg-mist-100 px-3 py-1.5 text-sm font-semibold text-ink-600"><span className={cx('h-2 w-2 rounded-full', mobileStatus.open ? 'bg-emerald-500' : 'bg-ink-300')} aria-hidden="true" />{mobileStatus.label}</p>}
             {NAV.map((n) => (
               <NavLink key={n.to} to={n.to} className={({ isActive }) => cx('rounded-xl px-4 py-3.5 text-lg font-semibold', isActive ? 'bg-brand-50 text-brand-700' : 'text-ink hover:bg-mist-100')}>{n.label === 'Repairs' ? 'Repair services' : n.label}</NavLink>
             ))}
             <NavLink to="/faq" className="rounded-xl px-4 py-3.5 text-lg font-semibold text-ink hover:bg-mist-100">FAQ</NavLink>
+            <p className="mt-5 px-4 text-xs font-semibold uppercase tracking-wider text-ink-400">Popular repairs</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {services.filter((x) => x.featured).slice(0, 6).map((x) => (
+                <Link key={x.slug} to={`/services/${x.slug}`} className="flex items-center gap-2.5 rounded-xl p-2 ring-1 ring-mist-200 hover:ring-brand-200">
+                  <img src={imgSrc(x.image, 640)} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" loading="lazy" />
+                  <span className="text-[13px] font-medium leading-tight text-ink-700">{x.name}</span>
+                </Link>
+              ))}
+            </div>
             <div className="mt-6 grid gap-3">
               <Link to="/book" className="btn-primary btn-lg"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
               <a href={telHref(business)} className="btn-outline btn-lg"><Phone className="h-5 w-5" aria-hidden="true" />Call {business.phone_display}</a>
               <a href={mapsDirections(business)} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-lg"><MapPin className="h-5 w-5" aria-hidden="true" />Directions</a>
             </div>
           </nav>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
@@ -161,7 +185,7 @@ function Footer() {
       </div>
       <div className="border-t border-mist-200">
         <div className="container-x flex flex-col gap-3 py-6 text-xs text-ink-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} All Uplinks. All prices in Canadian dollars (CAD). Product names and trademarks belong to their respective owners.</p>
+          <p className="flex items-start gap-2"><MapleLeaf className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600" /><span>© {year} All Uplinks · Proudly serving Keswick, Georgina and York Region, Ontario. All prices in Canadian dollars (CAD). Product names and trademarks belong to their respective owners.</span></p>
           <div className="flex gap-5"><Link to="/privacy" className="hover:text-ink">Privacy</Link><Link to="/terms" className="hover:text-ink">Terms</Link><a href="/sitemap.xml" className="hover:text-ink">Sitemap</a></div>
         </div>
       </div>
