@@ -530,6 +530,22 @@ await test('Email: admin can change the sign-in email from Account (password req
   eq((await adminFetch('/email', { method: 'POST', data: { email: 'owner@example.com', current: 'test-password-123' } })).status, 200, 'changed back');
 });
 
+console.log('\nHero Google rating');
+await test('Hero rating: hidden until a real rating is entered; then shown in first view and app, linking to Google', async () => {
+  const hero = async () => { const h = await (await fetch(BASE + '/')).text(); return h.slice(h.indexOf('data-shell'), h.indexOf('</section>')); };
+  assert(!(await hero()).includes('out of 5 on Google'), 'no rating by default');
+  const biz = (await adminFetch('/settings')).body.business;
+  await adminFetch('/settings/business', { method: 'PUT', data: { ...biz, google_rating: '9', google_review_count: '5' } });
+  assert(!(await hero()).includes('out of 5 on Google'), 'invalid rating (above 5) not shown');
+  await adminFetch('/settings/business', { method: 'PUT', data: { ...biz, google_rating: '4.75', google_review_count: '1234' } });
+  const h = await hero(); assert(h.includes('aria-label="Rated 4.8 out of 5 on Google, 1,234 Google reviews"'), 'first view badge');
+  const p = await newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+  const badge = p.getByTestId('hero-rating'); eq(await badge.getAttribute('href'), biz.google_review_url, 'links to Google reviews');
+  eq((await badge.textContent()).trim(), '4.81,234 Google reviews'); eq(await badge.locator('svg.text-amber-400').count(), 5, '4.75 rounds to 5 stars');
+  await p.close();
+  await adminFetch('/settings/business', { method: 'PUT', data: biz });
+});
+
 console.log('\nLinks, images, contact buttons, responsiveness');
 await test('Every internal link on every page resolves (no broken links)', async () => {
   const p = await newPage(); const seen = new Set(); const bad = [];

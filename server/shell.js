@@ -2,6 +2,7 @@
 // sees the finished design immediately (even before JavaScript loads) and the hand-over to the app is
 // near-invisible. It also carries the page text and links for search engines.
 import { storeStatus } from '../shared/hours.js';
+import { googleRating, RATING_CLASS, STAR_PATH, G_PATHS } from '../shared/rating.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const LEAF = 'M50 4 57 18 66 13 63 35 77 22 80 30 92 27 86 42 95 47 75 62 78 70 55 66 54 90 52 90 52 98 48 98 48 90 46 90 45 66 22 70 25 62 5 47 14 42 8 27 20 30 23 22 37 35 34 13 43 18Z';
@@ -39,6 +40,14 @@ function header(b) {
 <span class="btn-ghost px-2.5 lg:hidden" aria-hidden="true">${icon(MENU, 'h-6 w-6')}</span></div></div></header>`;
 }
 
+function ratingBadge(b) {
+  const r = googleRating(b);
+  if (!r) return '';
+  const g = `<svg viewBox="0 0 24 24" class="h-4 w-4" aria-hidden="true">${G_PATHS.map(([f, d]) => `<path fill="${f}" d="${d}"/>`).join('')}</svg>`;
+  const stars = [1, 2, 3, 4, 5].map((i) => `<svg viewBox="0 0 20 20" class="${i <= r.stars ? 'h-4 w-4 text-amber-400' : 'h-4 w-4 text-mist-300'}" fill="currentColor"><path d="${STAR_PATH}"/></svg>`).join('');
+  return `<a${r.url ? ` href="${esc(r.url)}"` : ''} target="_blank" rel="noopener noreferrer" class="${RATING_CLASS} transition hover:ring-brand-200" aria-label="Rated ${esc(r.value)} out of 5 on Google, ${esc(r.count)}">${g}<span class="font-bold text-ink">${esc(r.value)}</span><span class="inline-flex gap-0.5" aria-hidden="true">${stars}</span><span class="text-ink-500">${esc(r.count)}</span></a>`;
+}
+
 function homeHero(b, content, status) {
   const t = content.hero_title || '';
   const i = t.indexOf(' — ');
@@ -49,7 +58,7 @@ function homeHero(b, content, status) {
 <div class="container-x relative grid items-center gap-8 pb-12 pt-8 sm:gap-10 sm:pb-16 sm:pt-12 lg:grid-cols-[1.2fr_.8fr] lg:gap-14 lg:pb-24 lg:pt-16"><div>
 <p class="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink-600 shadow-sm ring-1 ring-mist-200"><span class="inline-flex items-center gap-1.5 text-brand-700">${leaf('h-3.5 w-3.5')}${esc(content.hero_eyebrow || 'Keswick, Ontario')}</span>${status ? `<span class="text-mist-300" aria-hidden="true">|</span><span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full ${status.open ? 'bg-emerald-500' : 'bg-ink-300'}" aria-hidden="true"></span>${esc(status.label)}</span>` : ''}</p>
 <h1 class="mt-5 text-balance text-[2.3rem] font-extrabold leading-[1.06] tracking-tight min-[380px]:text-[2.55rem] sm:text-[3.25rem] lg:text-[3.45rem] xl:text-[3.9rem]">${esc(lead)}${accent ? `<span class="mt-1 block text-brand-600">${esc(accent)}</span>` : ''}</h1>
-<p class="mt-5 max-w-xl text-[1.05rem] leading-relaxed text-ink-500 sm:text-lg">${esc(content.hero_subtitle || '')}</p>
+<p class="mt-5 max-w-xl text-[1.05rem] leading-relaxed text-ink-500 sm:text-lg">${esc(content.hero_subtitle || '')}</p>${ratingBadge(b)}
 <div class="mt-7 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap"><a href="/book" class="btn-primary btn-lg px-4 sm:px-7">${icon(CAL)}Book a Repair</a><a href="tel:${esc(b.phone_tel)}" class="btn-dark btn-lg px-4 sm:px-7">${icon(PHONE)}Call Now</a></div>
 <a href="/repair-prices" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700">Or see your exact price in 30 seconds${icon(ARROW, 'h-4 w-4')}</a>
 <ul class="mt-7 flex flex-col gap-2 text-sm font-medium text-ink-600 sm:flex-row sm:flex-wrap sm:gap-x-5">${trust}</ul></div>

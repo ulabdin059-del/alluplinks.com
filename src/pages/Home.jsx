@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Phone, CalendarCheck, ArrowRight, BadgeDollarSign, Timer, Wrench, ShieldCheck, MapPin, Smartphone, Cpu, Recycle, ClipboardCheck, PackageCheck, Search, Star } from 'lucide-react';
 import { useSite, useCatalog, useSeo } from '../lib/site.jsx';
-import { useReveal, useFetch, telHref, money, storeStatus } from '../lib/utils.js';
+import { useReveal, useFetch, telHref, money, storeStatus, cx } from '../lib/utils.js';
+import { googleRating, RATING_CLASS, STAR_PATH, G_PATHS } from '../../shared/rating.js';
 import { api } from '../lib/api.js';
 import { Img, SectionHeading, Accordion, LocationCard } from '../components/ui.jsx';
 import PriceCalculator from '../components/PriceCalculator.jsx';
@@ -22,6 +23,7 @@ function Hero() {
   const status = storeStatus(hours);
   const { catalog } = useCatalog();
   const [lead, accent] = heroLines(content.hero_title);
+  const rating = googleRating(b);
   const sample = (() => {
     const m = catalog?.categories.find((c) => c.slug === 'iphone')?.brands[0]?.models.find((x) => x.name === 'iPhone 15');
     return m ? { model: 'iPhone 15', screen: m.prices.screen, battery: m.prices.battery } : null;
@@ -40,6 +42,15 @@ function Hero() {
             {lead}{accent && <span className="mt-1 block text-brand-600">{accent}</span>}
           </h1>
           <p className="mt-5 max-w-xl text-[1.05rem] leading-relaxed text-ink-500 sm:text-lg">{content.hero_subtitle}</p>
+          {rating && (
+            <a href={rating.url || undefined} target="_blank" rel="noopener noreferrer" className={cx(RATING_CLASS, 'transition hover:ring-brand-200')} data-testid="hero-rating"
+              aria-label={`Rated ${rating.value} out of 5 on Google, ${rating.count}`}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">{G_PATHS.map(([f, d]) => <path key={f} fill={f} d={d} />)}</svg>
+              <span className="font-bold text-ink">{rating.value}</span>
+              <span className="inline-flex gap-0.5" aria-hidden="true">{[1, 2, 3, 4, 5].map((i) => <svg key={i} viewBox="0 0 20 20" className={i <= rating.stars ? 'h-4 w-4 text-amber-400' : 'h-4 w-4 text-mist-300'} fill="currentColor"><path d={STAR_PATH} /></svg>)}</span>
+              <span className="text-ink-500">{rating.count}</span>
+            </a>
+          )}
           <div className="mt-7 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
             <Link to="/book" className="btn-primary btn-lg px-4 sm:px-7"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
             <a href={telHref(b)} className="btn-dark btn-lg px-4 sm:px-7"><Phone className="h-5 w-5" aria-hidden="true" />Call Now</a>

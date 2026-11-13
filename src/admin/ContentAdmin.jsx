@@ -123,6 +123,8 @@ export function SettingsAdmin() {
           { name: 'phone_display', label: 'Phone (display)' }, { name: 'phone_tel', label: 'Phone (tel: link)', hint: 'E.164 format, e.g. +19055359503' }, { name: 'email', label: 'Public email (optional)', hint: 'Also receives admin notifications if ADMIN_NOTIFY_EMAIL isn’t set.' },
           { name: 'site_url', label: 'Website URL' }, { name: 'maps_query', label: 'Google Maps search text', full: true },
           { name: 'google_review_url', label: 'Google reviews page link (“Read All Google Reviews”)', full: true },
+          { name: 'google_rating', label: 'Google rating (shown in the homepage hero)', placeholder: 'e.g. 4.8', hint: 'Copy from your Google Business Profile. Leave empty to hide the rating.' },
+          { name: 'google_review_count', label: 'Number of Google reviews', placeholder: 'e.g. 57' },
           { name: 'google_write_review_url', label: '“Leave Us a Google Review” link', full: true, hint: 'Google Business Profile → Ask for reviews → copy the share link (looks like https://g.page/r/…/review). Until set, the reviews page link is used.' }]} />
       <HoursCard value={data.hours} onSave={put('hours')} />
       <SettingsCard title="Website content" value={data.content} onSave={put('content')}

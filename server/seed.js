@@ -34,7 +34,10 @@ export const DEFAULT_SETTINGS = {
     maps_query: 'All Uplinks - Phone Repair Keswick, 443 The Queensway South, Keswick, Ontario, Canada',
     google_review_url: 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8',
     // Direct "write a review" link from Google Business Profile (Ask for reviews → share link). Falls back to google_review_url.
-    google_write_review_url: ''
+    google_write_review_url: '',
+    // Google rating shown in the hero (copy from your Google Business Profile). Hidden while empty.
+    google_rating: '',
+    google_review_count: ''
   },
   // Store hours confirmed by the owner: weekdays 9–5, weekends 10–4.
   hours: STORE_HOURS,
