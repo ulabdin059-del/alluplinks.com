@@ -492,6 +492,44 @@ await test('Reviews: databases created before this change gain the new review fi
   eq(res.name, 'Old row'); eq(res.text, 'kept text'); fs.rmSync(dir, { recursive: true, force: true });
 });
 
+console.log('\nBusiness email');
+const OWNER_EMAIL = 'alluplinks1@gmail.com';
+await test('Email: shown in footer, contact section, contact page, privacy policy and business schema', async () => {
+  eq((await json('/api/site')).body.business.email, OWNER_EMAIL);
+  const p = await newPage();
+  await p.goto(BASE + '/contact', { waitUntil: 'networkidle' });
+  const mailtos = await p.$$eval('a[href^="mailto:"]', (as) => as.map((a) => a.getAttribute('href')));
+  assert(mailtos.length >= 3 && mailtos.every((h) => h === 'mailto:' + OWNER_EMAIL), 'contact card, location card and footer: ' + mailtos.join(','));
+  await p.goto(BASE + '/privacy', { waitUntil: 'networkidle' }); assert((await p.locator('main').textContent()).includes(OWNER_EMAIL), 'privacy policy');
+  await p.close();
+  const html = await (await fetch(BASE + '/')).text();
+  const lb = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1])).find((x) => Array.isArray(x['@type']));
+  eq(lb.email, OWNER_EMAIL, 'LocalBusiness email');
+});
+await test('Email: new booking / inquiry alerts are addressed to the business email', async () => {
+  const log = (await adminFetch('/email-log')).body;
+  assert(log.some((e) => e.recipient === OWNER_EMAIL && /New booking AU-/.test(e.subject)), 'booking alert');
+  assert(log.some((e) => e.recipient === OWNER_EMAIL && /New inquiry/.test(e.subject)), 'inquiry alert');
+});
+await test('Email: existing database — public email set if empty (never overwritten) and the single admin login moved to it', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const run = (dir, js, extra = {}) => execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e', js], { cwd: ROOT, env: { ...process.env, DATA_DIR: dir, ...extra }, encoding: 'utf8' }).trim().split('\n').pop();
+  for (const [preset, expectPublic] of [['', OWNER_EMAIL], ['shop@example.com', 'shop@example.com']]) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'au-email-'));
+    run(dir, `const m = await import('./server/db.js'); await m.ready; await m.setSetting('business', { ...m.getSetting('business'), email: ${JSON.stringify(preset)} }); await m.setSetting('data_version', 1); console.log('ok');`, { ADMIN_EMAIL: 'old-admin@example.com', ADMIN_PASSWORD: 'old-pass-12345' });
+    const out = JSON.parse(run(dir, "const m = await import('./server/db.js'); await m.ready; const a = await m.db.all('SELECT email, password_hash FROM admin_users'); const bc = (await import('bcryptjs')).default; console.log(JSON.stringify({ pub: m.getSetting('business').email, admins: a.map((x) => x.email), pw: bc.compareSync('old-pass-12345', a[0].password_hash) }));"));
+    eq(out.pub, expectPublic, 'public email'); eq(JSON.stringify(out.admins), JSON.stringify([OWNER_EMAIL]), 'admin login email'); eq(out.pw, true, 'password unchanged');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+await test('Email: admin can change the sign-in email from Account (password required)', async () => {
+  eq((await adminFetch('/email', { method: 'POST', data: { email: 'new-login@example.com', current: 'wrong' } })).status, 400, 'wrong password rejected');
+  eq((await adminFetch('/email', { method: 'POST', data: { email: 'not-an-email', current: 'test-password-123' } })).status, 422);
+  eq((await adminFetch('/email', { method: 'POST', data: { email: 'new-login@example.com', current: 'test-password-123' } })).status, 200);
+  eq((await json('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'new-login@example.com', password: 'test-password-123' }) })).status, 200, 'login with new email');
+  eq((await adminFetch('/email', { method: 'POST', data: { email: 'owner@example.com', current: 'test-password-123' } })).status, 200, 'changed back');
+});
+
 console.log('\nLinks, images, contact buttons, responsiveness');
 await test('Every internal link on every page resolves (no broken links)', async () => {
   const p = await newPage(); const seen = new Set(); const bad = [];

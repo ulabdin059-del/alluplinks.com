@@ -18,8 +18,9 @@ if (process.env.SMTP_HOST) {
 export const EMAIL_KIND = process.env.BREVO_API_KEY ? 'brevo' : process.env.RESEND_API_KEY ? 'resend' : transport ? 'smtp' : 'none';
 
 // MAIL_FROM: "All Uplinks <bookings@alluplinks.com>" or just an email address.
+// Falls back to the business email from Site settings, so confirmations come from the owner's address by default.
 function sender() {
-  const raw = process.env.MAIL_FROM || process.env.SMTP_USER || '';
+  const raw = process.env.MAIL_FROM || process.env.SMTP_USER || getSetting('business')?.email || '';
   const m = raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
   return m ? { name: m[1] || 'All Uplinks', email: m[2] } : { name: 'All Uplinks', email: raw.trim() };
 }

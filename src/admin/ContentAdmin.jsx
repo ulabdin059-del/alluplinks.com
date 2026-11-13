@@ -158,9 +158,22 @@ export function EmailLog() {
 
 export function Account() {
   const [f, setF] = useState({ current: '', next: '', confirm: '' });
+  const [em, setEm] = useState({ email: '', current: '' });
+  const { data: me, reload } = useAdminList('/me');
   return (
-    <div className="max-w-md">
-      <PageTitle title="Account">Change your admin password.</PageTitle>
+    <div className="max-w-md space-y-6">
+      <PageTitle title="Account">Your admin sign-in details.</PageTitle>
+      <form className="card space-y-4 p-6" onSubmit={async (e) => {
+        e.preventDefault();
+        try { const r = await adminApi('/email', { method: 'POST', body: em }); toast('Sign-in email changed to ' + r.email); setEm({ email: '', current: '' }); reload(); } catch (err) { toast(err.message, true); }
+      }}>
+        <h2 className="text-lg font-bold">Sign-in email</h2>
+        <p className="text-sm text-ink-500">Currently: <strong className="text-ink">{me?.email || '…'}</strong></p>
+        <div><label className="label" htmlFor="em-new">New sign-in email</label><input id="em-new" type="email" autoComplete="username" className="input" value={em.email} onChange={(e) => setEm({ ...em, email: e.target.value })} required /></div>
+        <div><label className="label" htmlFor="em-pw">Current password</label><input id="em-pw" type="password" autoComplete="current-password" className="input" value={em.current} onChange={(e) => setEm({ ...em, current: e.target.value })} required /></div>
+        <button className="btn-outline">Change sign-in email</button>
+      </form>
+      <h2 className="sr-only">Password</h2>
       <form className="card space-y-4 p-6" onSubmit={async (e) => {
         e.preventDefault();
         if (f.next !== f.confirm) return toast('New passwords do not match', true);

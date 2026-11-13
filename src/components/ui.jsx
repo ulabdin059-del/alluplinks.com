@@ -1,6 +1,6 @@
 import { useState, useId } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Clock, MapPin, Phone, Navigation, ShieldCheck } from 'lucide-react';
+import { ChevronDown, Clock, MapPin, Phone, Navigation, ShieldCheck, Mail } from 'lucide-react';
 import { cx, imgSrc, imgSet, telHref, mapsDirections, mapsEmbed, mapsSearch } from '../lib/utils.js';
 import { useSite } from '../lib/site.jsx';
 import { DAYS } from '../../shared/constants.js';
@@ -112,6 +112,8 @@ export function LocationCard({ withMap = true }) {
             <a href={mapsSearch(b)} target="_blank" rel="noopener noreferrer" className="text-ink-600 hover:text-brand-700">{b.street}<br />{b.city}, {b.region_name}{b.postal_code ? ' ' + b.postal_code : ''}, Canada</a></li>
           <li className="flex gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden="true" />
             <a href={telHref(b)} className="font-semibold text-ink hover:text-brand-700">{b.phone_display}</a></li>
+          {b.email && <li className="flex gap-3"><Mail className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden="true" />
+            <a href={`mailto:${b.email}`} className="break-all text-ink-600 hover:text-brand-700">{b.email}</a></li>}
           <li className="flex gap-3"><Clock className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden="true" /><div className="flex-1"><Hours compact /></div></li>
         </ul>
         <div className="mt-8 flex flex-wrap gap-3">

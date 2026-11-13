@@ -29,7 +29,7 @@ export const DEFAULT_SETTINGS = {
     country: 'CA',
     phone_display: '905-535-9503',
     phone_tel: '+19055359503',
-    email: '',
+    email: 'alluplinks1@gmail.com',
     site_url: 'https://alluplinks.com',
     maps_query: 'All Uplinks - Phone Repair Keswick, 443 The Queensway South, Keswick, Ontario, Canada',
     google_review_url: 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8',

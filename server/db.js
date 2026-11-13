@@ -255,6 +255,17 @@ const DATA_UPDATES = [
     await db.batch(S);
   }
 ];
+DATA_UPDATES.push(async () => { // 2026-11: owner's business email
+  const EMAIL = 'alluplinks1@gmail.com';
+  const biz = getSetting('business');
+  if (!biz.email) await setSetting('business', { ...biz, email: EMAIL }); // public email (only if none was set)
+  // Admin sign-in moves to the owner's email when there is exactly one admin account (password unchanged).
+  const admins = await db.all('SELECT id, email FROM admin_users');
+  if (admins.length === 1 && admins[0].email !== EMAIL && !(await db.get('SELECT 1 x FROM admin_users WHERE email = ?', EMAIL))) {
+    await db.run('UPDATE admin_users SET email = ? WHERE id = ?', EMAIL, admins[0].id);
+    console.log(`[db] Admin sign-in email changed from ${admins[0].email} to ${EMAIL}.`);
+  }
+});
 async function applyDataUpdates() {
   const done = getSetting('data_version') || 0;
   for (let i = done; i < DATA_UPDATES.length; i++) { await DATA_UPDATES[i](); await setSetting('data_version', i + 1); }

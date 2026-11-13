@@ -412,6 +412,17 @@ admin.post('/password', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+admin.post('/email', wrap(async (req, res) => {
+  const u = await db.get('SELECT * FROM admin_users WHERE id = ?', req.admin.id);
+  if (!bcrypt.compareSync(String(req.body.current || ''), u.password_hash)) return res.status(400).json({ error: 'Current password is incorrect.' });
+  const email = clean(req.body.email, 160).toLowerCase();
+  if (!isEmail(email)) return res.status(422).json({ error: 'Enter a valid email address.' });
+  if (await db.get('SELECT 1 x FROM admin_users WHERE email = ? AND id != ?', email, u.id)) return res.status(409).json({ error: 'That email is already used by another admin.' });
+  await db.run('UPDATE admin_users SET email = ? WHERE id = ?', email, u.id);
+  res.cookie('au_admin', jwt.sign({ sub: u.id, email }, JWT_SECRET, { expiresIn: '12h' }), cookieOpts);
+  res.json({ email });
+}));
+
 admin.get('/stats', wrap(async (_req, res) => {
   const now = torontoNow();
   const n = async (sql, ...a) => (await db.get(sql, ...a)).n;

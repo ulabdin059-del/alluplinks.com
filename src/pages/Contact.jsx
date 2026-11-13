@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Navigation, CalendarCheck, CheckCircle2, ImagePlus, X } from 'lucide-react';
+import { Phone, Navigation, CalendarCheck, CheckCircle2, ImagePlus, X, Mail } from 'lucide-react';
 import { useSeo, useSite } from '../lib/site.jsx';
 import { api } from '../lib/api.js';
 import { cx, telHref, mapsDirections, useReveal, fileList } from '../lib/utils.js';
@@ -42,6 +42,7 @@ export default function Contact() {
           <p className="mt-3 text-ink-500">We’ll reply by email or phone. For the fastest answer on pricing, try the <Link to="/repair-prices" className="font-semibold text-brand-700 hover:underline">price calculator</Link>, or <Link to="/book" className="font-semibold text-brand-700 hover:underline">book a repair</Link> directly.</p>
           <div className="mt-8 space-y-3">
             <a href={telHref(b)} className="card card-hover flex items-center gap-4 p-5"><span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50"><Phone className="h-5 w-5 text-brand-600" aria-hidden="true" /></span><span><span className="block text-sm text-ink-500">Call the store</span><span className="block font-bold">{b.phone_display}</span></span></a>
+            {b.email && <a href={`mailto:${b.email}`} className="card card-hover flex items-center gap-4 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50"><Mail className="h-5 w-5 text-brand-600" aria-hidden="true" /></span><span className="min-w-0"><span className="block text-sm text-ink-500">Email us</span><span className="block break-all font-bold">{b.email}</span></span></a>}
             <Link to="/book" className="card card-hover flex items-center gap-4 p-5"><span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50"><CalendarCheck className="h-5 w-5 text-brand-600" aria-hidden="true" /></span><span><span className="block text-sm text-ink-500">Reserve a time</span><span className="block font-bold">Book a repair online</span></span></Link>
           </div>
         </div>

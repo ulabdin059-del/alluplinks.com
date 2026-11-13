@@ -22,7 +22,7 @@ export default function Legal({ kind }) {
           <h2>Retention and security</h2>
           <p>Records are kept only as long as needed for the purposes above and for legal and accounting requirements. Access is restricted to authorized staff.</p>
           <h2>Your rights</h2>
-          <p>You may ask to access or correct your personal information, or withdraw consent, by calling us at <a href={telHref(b)}>{b.phone_display}</a> or visiting the store at {b.street}, {b.city}, {b.region_name}.</p>
+          <p>You may ask to access or correct your personal information, or withdraw consent, by calling us at <a href={telHref(b)}>{b.phone_display}</a>{b.email && <>, emailing <a href={`mailto:${b.email}`}>{b.email}</a>,</>} or visiting the store at {b.street}, {b.city}, {b.region_name}.</p>
         </>) : (<>
           <p>These terms apply to services and products provided by {b.name} at {b.street}, {b.city}, {b.region_name}.</p>
           <h2>Prices and estimates</h2>
