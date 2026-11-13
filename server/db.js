@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS repair_types (
 CREATE TABLE IF NOT EXISTS prices (
   model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
   repair_type_id INTEGER NOT NULL REFERENCES repair_types(id) ON DELETE CASCADE,
-  price INTEGER NOT NULL, PRIMARY KEY (model_id, repair_type_id));
+  price INTEGER NOT NULL, price_high INTEGER, PRIMARY KEY (model_id, repair_type_id));
 CREATE TABLE IF NOT EXISTS services (
   id INTEGER PRIMARY KEY, slug TEXT UNIQUE NOT NULL, name TEXT NOT NULL, short TEXT, description TEXT,
   benefits TEXT DEFAULT '[]', image TEXT, image_alt TEXT, price_source TEXT DEFAULT '{}',
@@ -215,6 +215,51 @@ async function migrate() {
   if (!getSetting('seed_complete')) await setSetting('seed_complete', true);
 }
 
+// One-time price-list updates from the owner. Unlike MIGRATIONS these also run on brand-new databases
+// (after the seed), so every database ends up with the same prices. Tracked by the "data_version" setting.
+const DATA_UPDATES = [
+  async () => { // 2026-11: owner's iPhone rate list (server/data/iphone-prices-owner-2026-11.json)
+    const list = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'iphone-prices-owner-2026-11.json'), 'utf8'));
+    const brand = await db.get("SELECT b.id FROM brands b JOIN categories c ON c.id = b.category_id WHERE c.slug = 'iphone' AND b.name = 'Apple'");
+    if (!brand) return;
+    const S = [];
+    // New models: iPhone 18 directly after iPhone 18 Pro; iPhone 7 and 6 at the end.
+    let models = await db.all('SELECT id, name, sort FROM models WHERE brand_id = ? ORDER BY sort, id', brand.id);
+    const have = new Set(models.map((m) => m.name));
+    let maxSort = Math.max(0, ...models.map((m) => m.sort));
+    for (const [name, where, ref] of list.newModels) {
+      if (have.has(name)) continue;
+      if (where === 'after') {
+        const r = models.find((m) => m.name === ref);
+        const at = r ? r.sort + 1 : ++maxSort;
+        await db.run('UPDATE models SET sort = sort + 1 WHERE brand_id = ? AND sort >= ?', brand.id, at);
+        await db.run('INSERT INTO models(brand_id, name, sort) VALUES(?,?,?)', brand.id, name, at);
+        maxSort++;
+      } else await db.run('INSERT INTO models(brand_id, name, sort) VALUES(?,?,?)', brand.id, name, ++maxSort);
+      models = await db.all('SELECT id, name, sort FROM models WHERE brand_id = ? ORDER BY sort, id', brand.id);
+    }
+    const rt = Object.fromEntries((await db.all("SELECT id, key FROM repair_types WHERE device_type = 'Phone'")).map((r) => [r.key, r.id]));
+    const upsert = (mid, key, lo, hi) => S.push(['INSERT INTO prices(model_id,repair_type_id,price,price_high) VALUES(?,?,?,?) ON CONFLICT(model_id,repair_type_id) DO UPDATE SET price = excluded.price, price_high = excluded.price_high', mid, rt[key], lo, hi]);
+    for (const m of models) {
+      const screen = list.screen[m.name];
+      if (screen) upsert(m.id, 'screen', screen[0], screen[1]);
+      else S.push(['DELETE FROM prices WHERE model_id = ? AND repair_type_id = ?', m.id, rt.screen]); // "Quote in store"
+      for (const [key, [lo, hi]] of Object.entries(list.allModels)) upsert(m.id, key, lo, hi);
+    }
+    // Ranges are now set per repair, so the "up to $60" wording no longer fits (only replaced if still the old default).
+    const pricing = getSetting('pricing');
+    if (pricing?.note === 'Final price can vary by up to $60 depending on part availability, part quality and device condition. We always confirm the price with you before any work begins.') await setSetting('pricing', { ...pricing, note: 'Final price depends on part availability, part quality and device condition. We always confirm the price with you before any work begins.' });
+    // The range now starts at iPhone 6: update the wording that said "iPhone 8 to …".
+    S.push(["UPDATE categories SET blurb = REPLACE(blurb, 'iPhone 8 to', 'iPhone 6 to') WHERE slug = 'iphone'"]);
+    S.push(["UPDATE services SET benefits = REPLACE(benefits, 'iPhone 8 to', 'iPhone 6 to'), meta_description = REPLACE(meta_description, 'iPhone 8 to', 'iPhone 6 to') WHERE slug = 'iphone-screen-replacement'"]);
+    await db.batch(S);
+  }
+];
+async function applyDataUpdates() {
+  const done = getSetting('data_version') || 0;
+  for (let i = done; i < DATA_UPDATES.length; i++) { await DATA_UPDATES[i](); await setSetting('data_version', i + 1); }
+}
+
 async function ensureAdmin() {
   const email = (process.env.ADMIN_EMAIL || 'admin@alluplinks.com').toLowerCase();
   const n = (await db.get('SELECT COUNT(*) n FROM admin_users')).n;
@@ -261,7 +306,7 @@ export async function importAll(backup) {
 }
 
 // Adds columns introduced after a database was created (SQLite ALTER TABLE only adds; nothing is removed).
-const ADDED_COLUMNS = { reviews: [['link', 'TEXT'], ['review_date', 'TEXT'], ['sort', 'INTEGER DEFAULT 0']] };
+const ADDED_COLUMNS = { reviews: [['link', 'TEXT'], ['review_date', 'TEXT'], ['sort', 'INTEGER DEFAULT 0']], prices: [['price_high', 'INTEGER']] };
 async function addMissingColumns() {
   for (const [table, cols] of Object.entries(ADDED_COLUMNS)) {
     const have = new Set((await db.all(`PRAGMA table_info(${table})`)).map((c) => c.name));
@@ -277,6 +322,7 @@ export const ready = (async () => {
   const seeded = await seedIfEmpty();
   if (seeded) await loadSettings();
   else await migrate();
+  await applyDataUpdates();
   await ensureAdmin();
   console.log(`[db] Ready (${DB_KIND}).`);
 })();

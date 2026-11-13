@@ -51,7 +51,7 @@ export const DEFAULT_SETTINGS = {
   },
   pricing: {
     variance: 60,
-    note: 'Final price can vary by up to $60 depending on part availability, part quality and device condition. We always confirm the price with you before any work begins.'
+    note: 'Final price depends on part availability, part quality and device condition. We always confirm the price with you before any work begins.'
   },
   warranty: { text: '' },
   booking: {
@@ -109,7 +109,7 @@ export const REPAIR_TYPES = {
 
 // brands: [display name, source device type in price data, source brand in price data]
 export const CATEGORIES = [
-  { slug: 'iphone', name: 'iPhone', device_type: 'Phone', image: 'prod-iphone-blue', blurb: 'iPhone 8 to iPhone 18 Pro Max', brands: [['Apple', 'Phone', 'Apple']] },
+  { slug: 'iphone', name: 'iPhone', device_type: 'Phone', image: 'prod-iphone-blue', blurb: 'iPhone 6 to iPhone 18 Pro Max', brands: [['Apple', 'Phone', 'Apple']] },
   { slug: 'samsung', name: 'Samsung', device_type: 'Phone', image: 'svc-samsung-screen', blurb: 'Galaxy S, Z Fold, Z Flip, Note & A series', brands: [['Samsung', 'Phone', 'Samsung']] },
   { slug: 'google-pixel', name: 'Google Pixel', device_type: 'Phone', image: 'prod-android', blurb: 'Pixel 7, 8 and 9 series', brands: [['Google', 'Phone', 'Google']] },
   { slug: 'ipad', name: 'iPad', device_type: 'Tablet', image: 'svc-ipad', blurb: 'iPad, iPad Air and iPad Pro', brands: [['Apple', 'Tablet', 'Apple']] },
@@ -127,7 +127,7 @@ export const SERVICES = [
     slug: 'iphone-screen-replacement', name: 'iPhone Screen Replacement', featured: true,
     short: 'Cracked glass, black spots, lines or a touch screen that stopped responding — replaced while you wait on most models.',
     description: 'A damaged iPhone display is more than cosmetic: cracks spread, touch becomes unreliable and glass splinters can cut. We replace the complete display assembly, transfer your earpiece and sensors, and test True Tone, Face ID, brightness and touch before handing your phone back. Most iPhone screens are completed in a single visit.',
-    benefits: ['Model-specific pricing for every iPhone from iPhone 8 to iPhone 18 Pro Max', 'Full display assembly replaced and tested on the bench', 'Face ID, True Tone and touch checked before pickup', 'Your data stays on your phone — no reset required'],
+    benefits: ['Model-specific pricing for every iPhone from iPhone 6 to iPhone 18 Pro Max', 'Full display assembly replaced and tested on the bench', 'Face ID, True Tone and touch checked before pickup', 'Your data stays on your phone — no reset required'],
     image: 'svc-iphone-screen', image_alt: 'Technician replacing an iPhone screen at the repair bench',
     price_source: { categories: ['iphone'], repairs: ['screen'] },
     time_estimate: T.screen,
@@ -136,7 +136,7 @@ export const SERVICES = [
       { q: 'Why do newer iPhone screens cost more?', a: 'Newer and Pro models use larger, higher-refresh OLED panels that cost more to source. Our calculator shows the exact advertised price for your model.' }
     ],
     meta_title: 'iPhone Screen Replacement Keswick | All Uplinks',
-    meta_description: 'iPhone screen replacement in Keswick, ON. Exact prices for iPhone 8 to iPhone 18 Pro Max in CAD, most repairs done in 30–60 minutes. Book online at All Uplinks.'
+    meta_description: 'iPhone screen replacement in Keswick, ON. Exact prices for iPhone 6 to iPhone 18 Pro Max in CAD, most repairs done in 30–60 minutes. Book online at All Uplinks.'
   },
   {
     slug: 'iphone-battery-replacement', name: 'iPhone Battery Replacement', featured: true,

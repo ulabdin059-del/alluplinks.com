@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarCheck } from 'lucide-react';
 import { useCatalog, useSite } from '../lib/site.jsx';
-import { cx, money, range } from '../lib/utils.js';
+import { cx, money, range, highOf } from '../lib/utils.js';
 import { Img, SectionHeading } from './ui.jsx';
 import { bookHref } from './PriceCalculator.jsx';
 
@@ -86,7 +86,7 @@ export function PopularPrices() {
                   {COLS.map(([k, l]) => (
                     <div key={k} className="rounded-lg bg-mist-50 px-3 py-2 ring-1 ring-mist-200">
                       <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-400">{l}</dt>
-                      <dd className="text-sm font-semibold tabular-nums text-ink">{m.prices[k] != null ? range(m.prices[k], m.prices[k] + variance) : '—'}</dd>
+                      <dd className="text-sm font-semibold tabular-nums text-ink">{m.prices[k] != null ? range(m.prices[k], highOf(m, k, variance)) : '—'}</dd>
                     </div>
                   ))}
                 </dl>
@@ -105,7 +105,7 @@ export function PopularPrices() {
                 {rows.map((m) => (
                   <tr key={m.id} className="transition hover:bg-brand-50/40">
                     <th scope="row" className="whitespace-nowrap px-5 py-3.5 font-semibold text-ink">{m.name}</th>
-                    {COLS.map(([k]) => <td key={k} className="whitespace-nowrap px-5 py-3.5 tabular-nums text-ink-700">{m.prices[k] != null ? range(m.prices[k], m.prices[k] + variance) : <span className="text-ink-300">—</span>}</td>)}
+                    {COLS.map(([k]) => <td key={k} className="whitespace-nowrap px-5 py-3.5 tabular-nums text-ink-700">{m.prices[k] != null ? range(m.prices[k], highOf(m, k, variance)) : <span className="text-ink-300">—</span>}</td>)}
                     <td className="px-5 py-3.5 text-right"><Link to={bookHref({ category: t.slug, brand: brand.name, model: m.name })} className="btn-outline btn-sm"><CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />Book</Link></td>
                   </tr>
                 ))}

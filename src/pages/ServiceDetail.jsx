@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalendarCheck, Phone, CheckCircle2, Clock, Search, Stethoscope, Info, ArrowRight } from 'lucide-react';
 import { useSite, useSeo, useCatalog } from '../lib/site.jsx';
-import { useFetch, useReveal, telHref, money, range, cx } from '../lib/utils.js';
+import { useFetch, useReveal, telHref, money, range, highOf, cx } from '../lib/utils.js';
 import { api } from '../lib/api.js';
 import { Img, Accordion, WarrantyNote } from '../components/ui.jsx';
 import Spinner from '../components/Spinner.jsx';
@@ -43,7 +43,7 @@ function PriceTable({ table, variance, note }) {
             {rows.map((r) => (
               <tr key={r.category + r.brand + r.model} className="transition hover:bg-brand-50/40">
                 <th scope="row" className="px-5 py-3 font-semibold text-ink">{r.model}{r.brand !== 'Apple' && !r.model.includes(r.brand) && groups.length > 1 && <span className="ml-1 font-normal text-ink-400">· {r.brand}</span>}</th>
-                {table.repairs.map((rt) => <td key={rt.key} className="px-5 py-3 tabular-nums text-ink-700">{r.prices[rt.key] != null ? range(r.prices[rt.key], r.prices[rt.key] + variance) : <span className="text-ink-300">—</span>}</td>)}
+                {table.repairs.map((rt) => <td key={rt.key} className="px-5 py-3 tabular-nums text-ink-700">{r.prices[rt.key] != null ? range(r.prices[rt.key], highOf(r, rt.key, variance)) : <span className="text-ink-300">—</span>}</td>)}
                 <td className="px-5 py-3 text-right"><Link to={bookHref({ category: r.category_slug, brand: r.brand, model: r.model, repair: table.repairs.length === 1 ? table.repairs[0].key : '' })} className="btn-outline btn-sm">Book</Link></td>
               </tr>
             ))}

@@ -116,11 +116,12 @@ const catalog = () => cached('catalog', async () => {
     db.all('SELECT * FROM categories WHERE active = 1 ORDER BY sort, id'),
     db.all('SELECT * FROM brands WHERE active = 1 ORDER BY sort, id'),
     db.all('SELECT * FROM models WHERE active = 1 ORDER BY sort, id'),
-    db.all('SELECT p.model_id, r.key, p.price FROM prices p JOIN repair_types r ON r.id = p.repair_type_id WHERE r.active = 1'),
+    db.all('SELECT p.model_id, r.key, p.price, p.price_high FROM prices p JOIN repair_types r ON r.id = p.repair_type_id WHERE r.active = 1'),
     db.all('SELECT * FROM repair_types WHERE active = 1 ORDER BY sort, id')
   ]);
-  const pm = {};
-  for (const p of prices) (pm[p.model_id] ||= {})[p.key] = p.price;
+  // prices: { repairKey: from-price }; high: { repairKey: to-price } only where the owner set an explicit range.
+  const pm = {}, hm = {};
+  for (const p of prices) { (pm[p.model_id] ||= {})[p.key] = p.price; if (p.price_high != null) (hm[p.model_id] ||= {})[p.key] = p.price_high; }
   const repairTypes = {};
   for (const r of rts) (repairTypes[r.device_type] ||= []).push({ key: r.key, name: r.name, time: r.time_estimate, diag: !!r.diagnose_only });
   return {
@@ -128,7 +129,7 @@ const catalog = () => cached('catalog', async () => {
       id: c.id, slug: c.slug, name: c.name, device_type: c.device_type, image: c.image, blurb: c.blurb,
       brands: brands.filter((b) => b.category_id === c.id).map((b) => ({
         id: b.id, name: b.name,
-        models: models.filter((m) => m.brand_id === b.id).map((m) => ({ id: m.id, name: m.name, prices: pm[m.id] || {} }))
+        models: models.filter((m) => m.brand_id === b.id).map((m) => ({ id: m.id, name: m.name, prices: pm[m.id] || {}, high: hm[m.id] || {} }))
       }))
     })),
     repairTypes
@@ -136,7 +137,8 @@ const catalog = () => cached('catalog', async () => {
 });
 
 async function servicePriceTable(svc) {
-  const src = j(svc.price_source, {});
+  // Cached services arrive with price_source already parsed; raw rows have it as JSON text.
+  const src = typeof svc.price_source === 'string' ? j(svc.price_source, {}) : svc.price_source || {};
   if (!src.categories?.length) return null;
   const cat = await catalog();
   const rows = [];
@@ -144,10 +146,10 @@ async function servicePriceTable(svc) {
     const c = cat.categories.find((x) => x.slug === slug);
     if (!c) continue;
     for (const b of c.brands) for (const m of b.models) {
-      const cells = {};
+      const cells = {}, high = {};
       let any = false;
-      for (const r of src.repairs) if (m.prices[r] != null) { cells[r] = m.prices[r]; any = true; }
-      if (any) rows.push({ category: c.name, category_slug: c.slug, brand: b.name, model: m.name, prices: cells });
+      for (const r of src.repairs) if (m.prices[r] != null) { cells[r] = m.prices[r]; if (m.high[r] != null) high[r] = m.high[r]; any = true; }
+      if (any) rows.push({ category: c.name, category_slug: c.slug, brand: b.name, model: m.name, prices: cells, high });
     }
   }
   const types = {};
@@ -226,17 +228,20 @@ api.post('/bookings', formLimiter, uploader.array('photos', 5), wrap(async (req,
 
   // Recompute the estimate on the server from the database.
   const [priceRows, rtRows] = await Promise.all([
-    db.all(`SELECT r.key, p.price FROM models m JOIN brands b ON b.id = m.brand_id
+    db.all(`SELECT r.key, p.price, p.price_high FROM models m JOIN brands b ON b.id = m.brand_id
       JOIN repair_types r ON r.device_type = ? LEFT JOIN prices p ON p.model_id = m.id AND p.repair_type_id = r.id
       WHERE b.category_id = ? AND b.name = ? AND m.name = ?`, cat.device_type, cat.id, f.brand, f.model),
     db.all('SELECT key, name FROM repair_types WHERE device_type = ?', cat.device_type)
   ]);
   const rtNames = Object.fromEntries(rtRows.map((r) => [r.key, r.name]));
-  const priceMap = Object.fromEntries(priceRows.map((r) => [r.key, r.price]));
+  const priceMap = Object.fromEntries(priceRows.map((r) => [r.key, r]));
   const variance = getSetting('pricing').variance || 0;
-  let low = 0, n = 0, diag = false;
-  for (const r of f.repairs) { if (priceMap[r] != null) { low += priceMap[r]; n++; } else diag = true; }
-  const est = n ? { low, high: low + n * variance } : { low: null, high: null };
+  let low = 0, high = 0, n = 0, diag = false;
+  for (const r of f.repairs) {
+    const p = priceMap[r];
+    if (p && p.price != null) { low += p.price; high += p.price_high ?? p.price + variance; n++; } else diag = true;
+  }
+  const est = n ? { low, high } : { low: null, high: null };
 
   // Quick pre-check so an obviously taken slot doesn't upload photos first.
   const pre = (await slotsFor(f.date)).slots.find((s) => s.time === f.time);
@@ -530,7 +535,15 @@ admin.put('/prices', wrap(async (req, res) => {
     else {
       const p = Math.round(Number(it.price));
       if (!(p >= 0 && p < 100000)) return res.status(422).json({ error: 'Invalid price' });
-      stmts.push(['INSERT INTO prices(model_id,repair_type_id,price) VALUES(?,?,?) ON CONFLICT(model_id,repair_type_id) DO UPDATE SET price = excluded.price', mid, rid, p]);
+      // price_high: omitted = keep the current "to" price; null/'' = clear it (range uses + variance); number = set it.
+      if ('price_high' in it) {
+        const h = it.price_high === null || it.price_high === '' ? null : Math.round(Number(it.price_high));
+        if (h != null && !(h >= p && h < 100000)) return res.status(422).json({ error: '"To" price must be equal to or higher than the "from" price' });
+        stmts.push(['INSERT INTO prices(model_id,repair_type_id,price,price_high) VALUES(?,?,?,?) ON CONFLICT(model_id,repair_type_id) DO UPDATE SET price = excluded.price, price_high = excluded.price_high', mid, rid, p, h]);
+      } else {
+        stmts.push(['INSERT INTO prices(model_id,repair_type_id,price) VALUES(?,?,?) ON CONFLICT(model_id,repair_type_id) DO UPDATE SET price = excluded.price', mid, rid, p]);
+        stmts.push(['UPDATE prices SET price_high = NULL WHERE model_id = ? AND repair_type_id = ? AND price_high < price', mid, rid]);
+      }
     }
   }
   await db.batch(stmts);

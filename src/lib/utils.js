@@ -57,3 +57,6 @@ export function useFetch(fn, deps = []) {
 export const fileList = (files, max = 5) => Array.from(files || []).filter((f) => /^image\//.test(f.type)).slice(0, max);
 
 export { storeStatus } from '../../shared/hours.js';
+
+// "To" price for a repair: the owner's explicit upper price when set, otherwise from-price + the global variance.
+export const highOf = (row, key, variance) => (row?.high?.[key] ?? row.prices[key] + (variance || 0));

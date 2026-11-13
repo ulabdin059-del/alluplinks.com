@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronRight, Clock, Search, Stethoscope, CalendarCheck, Phone, Info, RotateCcw } from 'lucide-react';
 import { useCatalog, useSite } from '../lib/site.jsx';
-import { cx, money, range, imgSrc, telHref } from '../lib/utils.js';
+import { cx, money, range, imgSrc, telHref, highOf } from '../lib/utils.js';
 import Spinner from './Spinner.jsx';
 import { WarrantyNote } from './ui.jsx';
 
@@ -195,7 +195,7 @@ export default function PriceCalculator({ syncUrl = false, headingLevel = 'h2' }
               <p className="text-sm font-medium text-ink-500">{sel.model} · {repair.name}</p>
               {price != null ? (
                 <>
-                  <H className="mt-2 font-display text-5xl font-extrabold tracking-tight text-ink sm:text-6xl" aria-label={`Price ${range(price, price + variance)}`}>{range(price, price + variance)}</H>
+                  <H className="mt-2 font-display text-5xl font-extrabold tracking-tight text-ink sm:text-6xl" aria-label={`Price ${range(price, highOf(model, repair.key, variance))}`}>{range(price, highOf(model, repair.key, variance))}</H>
                   <p className="mt-1 text-sm font-medium text-ink-500">CAD, plus applicable tax</p>
                   {repair.time && <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200"><Clock className="h-4 w-4" aria-hidden="true" />Estimated repair time: {repair.time}</p>}
                   <p className="mt-5 flex max-w-lg gap-2 text-sm leading-relaxed text-ink-500"><Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" aria-hidden="true" />{catalog.pricing?.note}</p>
@@ -235,7 +235,7 @@ export default function PriceCalculator({ syncUrl = false, headingLevel = 'h2' }
           </dl>
           <div className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-mist-200">
             <p className="text-xs font-medium text-ink-400">{price != null ? 'Your price' : 'Price'}</p>
-            <p className="mt-1 font-display text-3xl font-extrabold">{price != null ? range(price, price + variance) : repair ? 'In-store quote' : '—'}</p>
+            <p className="mt-1 font-display text-3xl font-extrabold">{price != null ? range(price, highOf(model, repair.key, variance)) : repair ? 'In-store quote' : '—'}</p>
             {repair?.time && price != null && <p className="mt-2 text-xs text-ink-500">Typically {repair.time}</p>}
           </div>
           <p className="mt-6 text-xs leading-relaxed text-ink-400">Prices shown are for {business.name} in {business.city}, ON, in Canadian dollars.</p>

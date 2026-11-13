@@ -16,14 +16,19 @@ export function Pricing() {
   useEffect(() => { if (!catId && cats.data?.length) setCatId(String(cats.data[0].id)); }, [cats.data, catId]);
   useEffect(() => { if (catId) { setGrid(null); adminApi('/prices?category_id=' + catId).then(setGrid).catch((e) => toast(e.message, true)); } }, [catId]);
   useEffect(() => { adminApi('/settings').then((s) => setPricing(s.pricing)); }, []);
-  const priceOf = (m, r) => grid.prices.find((p) => p.model_id === m && p.repair_type_id === r)?.price;
-  const save = async (model_id, repair_type_id, raw) => {
-    const price = raw === '' ? null : Number(raw);
-    if (price === (priceOf(model_id, repair_type_id) ?? null)) return;
+  const cellOf = (m, r) => grid.prices.find((p) => p.model_id === m && p.repair_type_id === r);
+  const priceOf = (m, r) => cellOf(m, r)?.price;
+  // Saves one cell. "from" empty = no price (quoted in store). "to" empty = automatic range (from + variance).
+  const save = async (model_id, repair_type_id, rawFrom, rawTo) => {
+    const cur = cellOf(model_id, repair_type_id);
+    const price = rawFrom === '' ? null : Number(rawFrom);
+    const price_high = rawTo === '' || price == null ? null : Number(rawTo);
+    if (price === (cur?.price ?? null) && price_high === (cur?.price_high ?? null)) return;
     if (price != null && !(price >= 0)) return toast('Enter a valid price', true);
+    if (price_high != null && !(price_high >= price)) return toast('"To" must be equal to or higher than the price', true);
     try {
-      await adminApi('/prices', { method: 'PUT', body: { model_id, repair_type_id, price } });
-      setGrid((g) => ({ ...g, prices: [...g.prices.filter((p) => !(p.model_id === model_id && p.repair_type_id === repair_type_id)), ...(price == null ? [] : [{ model_id, repair_type_id, price }])] }));
+      await adminApi('/prices', { method: 'PUT', body: { model_id, repair_type_id, price, price_high } });
+      setGrid((g) => ({ ...g, prices: [...g.prices.filter((p) => !(p.model_id === model_id && p.repair_type_id === repair_type_id)), ...(price == null ? [] : [{ model_id, repair_type_id, price, price_high }])] }));
       toast('Price saved');
     } catch (e) { toast(e.message, true); }
   };
@@ -32,7 +37,7 @@ export function Pricing() {
   const rts = grid ? grid.repairTypes.filter((r) => r.active) : [];
   return (
     <div>
-      <PageTitle title="Repair prices">Advertised base prices in CAD by model and repair. Changes go live instantly in the calculator, booking form and service pages. Leave a cell empty for “Quoted after diagnosis”.</PageTitle>
+      <PageTitle title="Repair prices">Prices in CAD by model and repair, shown to customers as a range (“$100 – $155”). Enter the price, and optionally the “to” price; if “to” is empty the range is the price + the variance below. Leave the price empty for “Quote in store”. Changes go live instantly.</PageTitle>
       {pricing && (
         <form className="card mb-6 grid gap-4 p-5 md:grid-cols-[160px_1fr_auto]" onSubmit={async (e) => { e.preventDefault(); await adminApi('/settings/pricing', { method: 'PUT', body: pricing }); toast('Pricing note saved'); }}>
           <div><label className="label" htmlFor="var">Price variance ($)</label><input id="var" type="number" min="0" className="input" value={pricing.variance} onChange={(e) => setPricing({ ...pricing, variance: Number(e.target.value) })} /><p className="mt-1 text-xs text-ink-400">Shown as “$price – $price+variance”. Use 0 for a single price.</p></div>
@@ -57,10 +62,21 @@ export function Pricing() {
                   <th className="sticky left-0 whitespace-nowrap bg-white px-4 py-2 font-semibold">{m.name}{grid.brands.length > 1 && <span className="ml-1 font-normal text-ink-400">· {brandName(m.brand_id)}</span>}</th>
                   {rts.map((r) => (
                     <td key={r.id} className="px-2 py-1.5">
-                      <div className="relative"><span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400">$</span>
-                        <input key={`${m.id}-${r.id}-${priceOf(m.id, r.id) ?? ''}`} type="number" min="0" inputMode="numeric" aria-label={`${m.name} ${r.name} price`} defaultValue={priceOf(m.id, r.id) ?? ''}
-                          onBlur={(e) => save(m.id, r.id, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                          className="w-24 rounded-lg border-0 py-1.5 pl-6 pr-2 text-sm ring-1 ring-inset ring-mist-200 focus:ring-2 focus:ring-brand-500" /></div>
+                      {(() => { const c = cellOf(m.id, r.id); const k = `${m.id}-${r.id}`;
+                        const commit = (e) => { const row = e.currentTarget.closest('[data-cell]'); save(m.id, r.id, row.querySelector('[data-from]').value, row.querySelector('[data-to]').value); };
+                        return (
+                          <div className="flex items-center gap-1" data-cell="">
+                            <div className="relative"><span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400">$</span>
+                              <input key={k + 'f'} data-from="" type="number" min="0" inputMode="numeric" aria-label={`${m.name} ${r.name} price`} defaultValue={c?.price ?? ''}
+                                onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                className="w-20 rounded-lg border-0 py-1.5 pl-6 pr-1 text-sm ring-1 ring-inset ring-mist-200 focus:ring-2 focus:ring-brand-500" /></div>
+                            <span className="text-xs text-ink-400">to</span>
+                            <input key={k + 't'} data-to="" type="number" min="0" inputMode="numeric" aria-label={`${m.name} ${r.name} price to`} defaultValue={c?.price_high ?? ''}
+                              placeholder={c ? String(c.price + (pricing?.variance || 0)) : ''} disabled={!c}
+                              onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                              className="w-16 rounded-lg border-0 px-2 py-1.5 text-sm ring-1 ring-inset ring-mist-200 placeholder:text-ink-300 focus:ring-2 focus:ring-brand-500 disabled:bg-mist-50" />
+                          </div>
+                        ); })()}
                     </td>
                   ))}
                 </tr>

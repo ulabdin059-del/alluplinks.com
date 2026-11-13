@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight, CalendarCheck, Clock, ImagePlus, X, CheckCircle2, MapPin, Phone, Download, Info, Stethoscope, Mail } from 'lucide-react';
 import { useCatalog, useSite, useSeo } from '../lib/site.jsx';
 import { api } from '../lib/api.js';
-import { cx, money, range, telHref, mapsDirections, fileList } from '../lib/utils.js';
+import { cx, money, range, telHref, mapsDirections, fileList, highOf } from '../lib/utils.js';
 import { Field } from '../components/ui.jsx';
 import Spinner from '../components/Spinner.jsx';
 
@@ -69,9 +69,9 @@ export default function Book() {
   useEffect(() => { if (catalog && step === 0 && model && params.get('model')) setStep(1); }, [catalog, model]); // eslint-disable-line
 
   const estimate = useMemo(() => {
-    let lo = 0, n = 0, diag = false;
-    for (const k of f.repairs) { const p = model?.prices[k]; if (p != null) { lo += p; n++; } else diag = true; }
-    return { lo, hi: lo + n * variance, n, diag };
+    let lo = 0, hi = 0, n = 0, diag = false;
+    for (const k of f.repairs) { const p = model?.prices[k]; if (p != null) { lo += p; hi += highOf(model, k, variance); n++; } else diag = true; }
+    return { lo, hi, n, diag };
   }, [f.repairs, model, variance]);
 
   useEffect(() => { if (step === 2 && !days) api('/availability').then((r) => setDays(r.days)).catch(() => setDays([])); }, [step, days]);
@@ -220,7 +220,7 @@ export default function Book() {
                             <span className={cx('grid h-5 w-5 shrink-0 place-items-center rounded-md ring-1 ring-inset transition', on ? 'bg-brand-600 ring-brand-600' : 'bg-white ring-mist-300')}>{on && <Check className="h-3.5 w-3.5 text-white" aria-hidden="true" />}</span>
                             <span className="flex-1"><span className="block text-[15px] font-semibold">{r.name}</span>
                               <span className="text-xs text-ink-400">{p != null ? (r.time ? `About ${r.time}` : '') : 'Diagnosed in store'}</span></span>
-                            <span className="text-sm font-bold">{p != null ? range(p, p + variance) : 'Quote'}</span>
+                            <span className="text-sm font-bold">{p != null ? range(p, highOf(model, r.key, variance)) : 'Quote'}</span>
                           </button>
                         );
                       })}

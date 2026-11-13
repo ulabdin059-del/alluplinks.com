@@ -62,7 +62,7 @@ await test('LocalBusiness, Service, FAQPage, Product and Breadcrumb schema prese
   eq(lb.telephone, '+19055359503'); eq(lb.address.streetAddress, '443 The Queensway South'); eq(lb.address.addressLocality, 'Keswick');
   eq(lb.openingHoursSpecification.length, 7, 'opening hours in schema'); eq(lb.openingHoursSpecification[0].opens, '09:00'); eq(lb.sameAs[0], 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); assert(home.some((x) => x['@type'] === 'FAQPage'), 'FAQPage');
   const svc = await get('/services/iphone-screen-replacement'); const s = svc.find((x) => x['@type'] === 'Service');
-  eq(s.offers.priceCurrency, 'CAD'); eq(s.offers.lowPrice, 79); eq(s.offers.highPrice, 499); assert(svc.some((x) => x['@type'] === 'BreadcrumbList'));
+  eq(s.offers.priceCurrency, 'CAD'); eq(s.offers.lowPrice, 55); eq(s.offers.highPrice, 200); assert(svc.some((x) => x['@type'] === 'BreadcrumbList'));
   assert((await get('/shop/product/apple-airpods-pro')).some((x) => x['@type'] === 'Product'), 'Product');
 });
 await test('sitemap.xml lists all pages, robots.txt blocks admin/api', async () => {
@@ -79,16 +79,42 @@ await test('Reference brand name appears nowhere in source, build, data or rende
 });
 
 console.log('\nPricing data');
-await test('Every one of the 579 researched price points is served exactly by the catalogue API', async () => {
+await test('Prices: non-iPhone prices unchanged; iPhone prices follow the owner rate list exactly', async () => {
   const src = JSON.parse(fs.readFileSync(path.join(ROOT, 'server/data/repair-prices.json'), 'utf8'));
+  const owner = JSON.parse(fs.readFileSync(path.join(ROOT, 'server/data/iphone-prices-owner-2026-11.json'), 'utf8'));
   const cat = (await json('/api/catalog')).body;
   const map = { 'Phone/Apple': 'iphone', 'Phone/Samsung': 'samsung', 'Phone/Google': 'google-pixel', 'Tablet/Apple': 'ipad', 'Tablet/Samsung': 'tablet', 'Laptop/Apple': 'macbook', 'Laptop/Dell': 'laptop', 'Laptop/HP': 'laptop', 'Laptop/Lenovo': 'laptop', 'Console/PlayStation': 'gaming-console', 'Console/Xbox': 'gaming-console', 'Console/Nintendo': 'gaming-console' };
-  let n = 0;
+  let other = 0, camera = 0;
   for (const [dt, brands] of Object.entries(src)) for (const [b, models] of Object.entries(brands)) for (const [m, reps] of Object.entries(models)) for (const [k, p] of Object.entries(reps)) {
-    const c = cat.categories.find((x) => x.slug === map[`${dt}/${b}`]); const model = c.brands.find((x) => x.name === b).models.find((x) => x.name === m);
-    eq(model?.prices[k], p, `${b} ${m} ${k}`); n++;
+    const slug = map[`${dt}/${b}`]; const c = cat.categories.find((x) => x.slug === slug); const model = c.brands.find((x) => x.name === b).models.find((x) => x.name === m);
+    if (slug === 'iphone' && k !== 'camera') continue; // replaced by the owner list (checked below)
+    eq(model?.prices[k], p, `${b} ${m} ${k}`); eq(model?.high?.[k], undefined, `${m} ${k} keeps automatic range`); slug === 'iphone' ? camera++ : other++;
   }
-  eq(n, 579, 'price point count');
+  eq(other, 384, 'non-iPhone price points unchanged'); eq(camera, 39, 'iPhone camera prices unchanged');
+  const iphone = cat.categories.find((x) => x.slug === 'iphone').brands[0].models;
+  eq(iphone.length, 42, 'iPhone models (39 + iPhone 18, 7, 6)');
+  for (const m of iphone) {
+    const s = owner.screen[m.name];
+    if (s) { eq(m.prices.screen, s[0], m.name + ' screen from'); eq(m.high.screen, s[1], m.name + ' screen to'); }
+    else eq(m.prices.screen, undefined, m.name + ' screen = quote in store');
+    for (const [k, [lo, hi]] of Object.entries(owner.allModels)) { eq(m.prices[k], lo, `${m.name} ${k} from`); eq(m.high[k], hi, `${m.name} ${k} to`); }
+  }
+  eq(iphone.map((m) => m.name).slice(0, 3).join('|'), 'iPhone 18 Pro Max|iPhone 18 Pro|iPhone 18', 'iPhone 18 listed after 18 Pro');
+  eq(iphone.slice(-2).map((m) => m.name).join('|'), 'iPhone 7|iPhone 6');
+  assert(!cat.pricing.note.includes('$60'), 'price note no longer says up to $60');
+});
+
+await test('Service pages show their model price tables (API and page)', async () => {
+  const expect = { 'iphone-screen-replacement': 30, 'charging-port-repair': 104, 'ipad-repair': 4, 'gaming-console-repair': 8 };
+  for (const [slug, rows] of Object.entries(expect)) {
+    const t = (await json('/api/services/' + slug)).body.price_table; assert(t && t.rows.length === rows, `${slug}: ${t?.rows.length} rows, expected ${rows}`);
+  }
+  const t = (await json('/api/services/iphone-screen-replacement')).body.price_table;
+  const r15 = t.rows.find((r) => r.model === 'iPhone 15'); eq(`${r15.prices.screen}-${r15.high.screen}`, '100-155', 'iPhone 15 row');
+  eq((await json('/api/services/water-damage-repair')).body.price_table, null, 'diagnosis-only service has no table');
+  const p = await newPage(); await p.goto(BASE + '/services/iphone-screen-replacement', { waitUntil: 'networkidle' });
+  await p.getByRole('heading', { name: 'iPhone Screen Replacement prices' }).waitFor();
+  assert(await p.getByRole('row', { name: /iPhone 15 \$100 – \$155/ }).count() === 1, 'iPhone 15 row shows owner range'); await p.close();
 });
 
 console.log('\nRepair price calculator (UI)');
@@ -100,9 +126,9 @@ const calc = async (p, cat, brand, model, repairName) => {
   await p.getByRole('button', { name: new RegExp('^' + repairName) }).click();
   return (await p.locator('h2[aria-label^="Price"]').getAttribute('aria-label'));
 };
-await test('iPhone 15 screen → $259 – $319, time 30–60 min, Book link prefilled', async () => {
+await test('iPhone 15 screen → $100 – $155 (owner list), time 30–60 min, Book link prefilled', async () => {
   const p = await newPage(); await p.goto(BASE + '/repair-prices');
-  eq(await calc(p, 'iPhone', null, 'iPhone 15', 'Screen replacement'), 'Price $259 – $319');
+  eq(await calc(p, 'iPhone', null, 'iPhone 15', 'Screen replacement'), 'Price $100 – $155');
   assert(await p.getByText('Estimated repair time: 30–60 min').isVisible(), 'time');
   const href = await p.getByRole('link', { name: 'Book this repair' }).getAttribute('href');
   eq(href, '/book?category=iphone&brand=Apple&model=iPhone+15&repair=screen');
@@ -130,7 +156,7 @@ await test('Full booking flow in the browser with photo upload → reference + c
   await p.getByText('What needs fixing on your iPhone 15?').waitFor();
   assert(await p.getByRole('checkbox', { name: /Screen replacement/ }).getAttribute('aria-checked') === 'true', 'prefilled repair');
   await p.getByRole('checkbox', { name: /Battery replacement/ }).click();
-  assert(await p.getByText('$368 – $488').first().isVisible(), 'combined estimate (259+109, +2×60)');
+  assert(await p.getByText('$150 – $335').first().isVisible(), 'combined estimate: screen 100–155 + battery 50–180');
   await p.getByRole('button', { name: 'Continue' }).click();
   await p.locator('[role=radiogroup][aria-label="Appointment date"] button:not([disabled])').first().click();
   const slot = p.locator('[role=radiogroup][aria-label="Appointment time"] button:not([disabled])').first(); await slot.waitFor(); await slot.click();
@@ -144,7 +170,7 @@ await test('Full booking flow in the browser with photo upload → reference + c
   await p.getByRole('checkbox').check(); await p.getByRole('button', { name: 'Confirm booking' }).click();
   await p.getByText('Your repair is booked').waitFor();
   bookingRef = await p.getByLabel('Booking reference').textContent(); assert(/^AU-\d{6}-[A-Z0-9]{4}$/.test(bookingRef), 'ref format ' + bookingRef);
-  assert(await p.getByText('$368 – $488').first().isVisible(), 'estimate on confirmation');
+  assert(await p.getByText('$150 – $335').first().isVisible(), 'estimate on confirmation');
   assert(await p.getByRole('link', { name: 'Add to calendar' }).isVisible()); await p.close();
 });
 const adminCtx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
@@ -152,7 +178,7 @@ const adminFetch = async (p, o = {}) => { const r = await adminCtx.request.fetch
 await test('Booking saved to database with photo and estimate', async () => {
   await adminCtx.request.post(BASE + '/api/admin/login', { data: { email: 'owner@example.com', password: 'test-password-123' } });
   const b = (await adminFetch('/bookings?q=' + bookingRef)).body.rows[0];
-  eq(b.model, 'iPhone 15'); eq(b.est_low, 368); eq(b.est_high, 488); eq(b.photos.length, 1); eq(b.status, 'pending'); deepRepairs(b.repairs);
+  eq(b.model, 'iPhone 15'); eq(b.est_low, 150); eq(b.est_high, 335); eq(b.photos.length, 1); eq(b.status, 'pending'); deepRepairs(b.repairs);
   bookedDate = b.date; bookedTime = b.time;
   const photo = await adminCtx.request.get(BASE + '/api/admin/files/' + b.photos[0]); eq(photo.status(), 200, 'photo served to admin');
   eq((await fetch(BASE + '/api/admin/files/' + b.photos[0])).status, 401, 'photo private');
@@ -231,7 +257,10 @@ await test('Price change in admin is reflected immediately in the public calcula
   eq((await adminFetch('/prices', { method: 'PUT', data: { model_id: m.id, repair_type_id: rt.id, price: 211 } })).status, 200);
   const pub = (await json('/api/catalog')).body.categories.find((c) => c.slug === 'iphone').brands[0].models.find((x) => x.name === 'iPhone 13');
   eq(pub.prices.screen, 211);
-  await adminFetch('/prices', { method: 'PUT', data: { model_id: m.id, repair_type_id: rt.id, price: 199 } });
+  await adminFetch('/prices', { method: 'PUT', data: { model_id: m.id, repair_type_id: rt.id, price: 90, price_high: 145 } });
+  eq((await adminFetch('/prices', { method: 'PUT', data: { model_id: m.id, repair_type_id: rt.id, price: 90, price_high: 80 } })).status, 422, '"to" below price rejected');
+  const back = (await json('/api/catalog')).body.categories.find((c) => c.slug === 'iphone').brands[0].models.find((x) => x.name === 'iPhone 13');
+  eq(`${back.prices.screen}-${back.high.screen}`, '90-145', 'restored owner range');
 });
 await test('Admin UI: login, dashboard, bookings, pricing grid, schedule and settings pages render', async () => {
   const c = await browser.newContext({ viewport: { width: 1366, height: 900 } }); const p = await newPage(c);
@@ -242,9 +271,13 @@ await test('Admin UI: login, dashboard, bookings, pricing grid, schedule and set
   }
   await p.goto(BASE + '/admin/bookings'); await p.getByText(bookingRef).click(); await p.getByLabel('Status', { exact: true }).selectOption('confirmed'); await p.getByText('Updated').waitFor();
   eq((await adminFetch('/bookings?q=' + bookingRef)).body.rows[0].status, 'confirmed');
-  await p.goto(BASE + '/admin/pricing'); const cell = p.getByLabel('iPhone 15 Screen replacement price'); await cell.fill('265'); await cell.press('Enter'); await p.getByText('Price saved').waitFor();
-  eq((await json('/api/catalog')).body.categories[0].brands[0].models.find((x) => x.name === 'iPhone 15').prices.screen, 265);
-  await cell.fill('259'); await cell.press('Enter'); await p.getByText('Price saved').first().waitFor();
+  await p.goto(BASE + '/admin/pricing'); const cell = p.getByLabel('iPhone 15 Screen replacement price', { exact: true }); await cell.fill('120'); await cell.press('Enter'); await p.getByText('Price saved').waitFor();
+  eq((await json('/api/catalog')).body.categories[0].brands[0].models.find((x) => x.name === 'iPhone 15').prices.screen, 120);
+  const to = p.getByLabel('iPhone 15 Screen replacement price to'); eq(await to.inputValue(), '155', '"to" price shown in grid');
+  await to.fill('165'); await to.press('Enter'); await p.getByText('Price saved').first().waitFor();
+  eq((await json('/api/catalog')).body.categories[0].brands[0].models.find((x) => x.name === 'iPhone 15').high.screen, 165, '"to" saved from admin grid');
+  await to.fill('155'); await to.press('Enter'); await p.waitForTimeout(400);
+  await cell.fill('100'); await cell.press('Enter'); await p.getByText('Price saved').first().waitFor();
   await c.close();
 });
 await test('Admin can publish verified store hours → shown on site and in LocalBusiness schema', async () => {
