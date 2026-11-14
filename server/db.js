@@ -266,6 +266,22 @@ DATA_UPDATES.push(async () => { // 2026-11: owner's business email
     console.log(`[db] Admin sign-in email changed from ${admins[0].email} to ${EMAIL}.`);
   }
 });
+DATA_UPDATES.push(async () => { // 2026-11: details from the Google Business Profile + honest price wording
+  const biz = getSetting('business');
+  const next = { ...biz };
+  if (!next.google_rating) { next.google_rating = '4.9'; next.google_review_count = next.google_review_count || '204'; }
+  if (next.street === '443 The Queensway South') next.street = '443 The Queensway South, Unit 23';
+  if (!next.postal_code) next.postal_code = 'L4P 3J4';
+  await setSetting('business', next);
+  // "exact price" wording → price ranges (exact phrase replacements only; owner-edited text is left alone)
+  const PHRASES = [['See your exact price online', 'See your price range online'], ['Check your exact price', 'Check your price'], ['Our calculator shows the exact advertised price for your model.', 'Our calculator shows the advertised price range for your model.'], ['Exact prices for iPhone', 'Prices for iPhone'], ['Exact model prices in CAD', 'Model-by-model prices in CAD'], ['See your exact price in CAD', 'See your price in CAD'], ['Exact prices in CAD by model', 'Prices in CAD by model'], ['you can see the exact price now', 'you can see the price now']];
+  const content = { ...getSetting('content') };
+  for (const k of Object.keys(content)) if (typeof content[k] === 'string') for (const [a, b] of PHRASES) content[k] = content[k].split(a).join(b);
+  await setSetting('content', content);
+  const S = [];
+  for (const [a, b] of PHRASES) for (const col of ['short', 'description', 'meta_description', 'faqs']) S.push([`UPDATE services SET ${col} = REPLACE(${col}, ?, ?) WHERE ${col} LIKE ?`, a, b, `%${a}%`]);
+  await db.batch(S);
+});
 async function applyDataUpdates() {
   const done = getSetting('data_version') || 0;
   for (let i = done; i < DATA_UPDATES.length; i++) { await DATA_UPDATES[i](); await setSetting('data_version', i + 1); }

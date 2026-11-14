@@ -120,7 +120,7 @@ export default function Sell() {
         </div>
       </section>
 
-      <section className="container-x grid gap-6 py-12 lg:grid-cols-[1fr_360px]">
+      <section className="container-x grid grid-cols-[minmax(0,1fr)] gap-6 py-12 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="card p-5 sm:p-8">
           <ol className="grid grid-cols-3 gap-2" aria-label="Trade-in progress">
             {['Device', 'Condition', 'Your details'].map((s, i) => (

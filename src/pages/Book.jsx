@@ -167,7 +167,7 @@ export default function Book() {
           <p className="lead mt-3">Tell us about your device, choose a time and we’ll have everything ready when you arrive.</p>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-6xl gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="mx-auto mt-10 grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="card p-5 sm:p-8">
             <Stepper step={step} />
             {!catalog ? <div className="grid min-h-[300px] place-items-center"><Spinner /></div> : (

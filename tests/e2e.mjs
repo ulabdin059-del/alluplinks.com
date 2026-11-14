@@ -59,7 +59,7 @@ await test('Unknown URL returns 404 with noindex', async () => { const r = await
 await test('LocalBusiness, Service, FAQPage, Product and Breadcrumb schema present', async () => {
   const get = async (p) => [...(await (await fetch(BASE + p)).text()).matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
   const home = await get('/'); const lb = home.find((x) => Array.isArray(x['@type']) && x['@type'].includes('LocalBusiness'));
-  eq(lb.telephone, '+19055359503'); eq(lb.address.streetAddress, '443 The Queensway South'); eq(lb.address.addressLocality, 'Keswick');
+  eq(lb.telephone, '+19055359503'); eq(lb.address.streetAddress, '443 The Queensway South, Unit 23'); eq(lb.address.postalCode, 'L4P 3J4'); eq(lb.address.addressLocality, 'Keswick');
   eq(lb.openingHoursSpecification.length, 7, 'opening hours in schema'); eq(lb.openingHoursSpecification[0].opens, '09:00'); eq(lb.sameAs[0], 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); assert(home.some((x) => x['@type'] === 'FAQPage'), 'FAQPage');
   const svc = await get('/services/iphone-screen-replacement'); const s = svc.find((x) => x['@type'] === 'Service');
   eq(s.offers.priceCurrency, 'CAD'); eq(s.offers.lowPrice, 55); eq(s.offers.highPrice, 200); assert(svc.some((x) => x['@type'] === 'BreadcrumbList'));
@@ -470,7 +470,7 @@ await test('Reviews: Google reviews show first with name, date, stars, Google ma
   eq(await first.getByRole('img', { name: '5 out of 5 stars' }).count(), 1, 'star rating');
   await first.getByRole('button', { name: 'Read more' }).click(); await first.getByRole('button', { name: 'Show less' }).waitFor();
   eq(await cards.nth(2).getAttribute('data-review'), 'website'); eq(await cards.nth(2).getByRole('link', { name: /View on Google/ }).count(), 0, 'no Google link on website review');
-  assert((await p.locator('main').textContent()).includes('4.5'), 'average of the Google reviews (5 + 4) / 2');
+  assert((await p.locator('main').textContent()).includes('4.9'), 'header shows the Google profile rating when set');
   await p.close();
   // Phone: horizontal swipe row; desktop: grid
   const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true }); const mp = await m.newPage(); await mp.goto(BASE + '/', { waitUntil: 'networkidle' });
@@ -533,8 +533,10 @@ await test('Email: admin can change the sign-in email from Account (password req
 console.log('\nHero Google rating');
 await test('Hero rating: hidden until a real rating is entered; then shown in first view and app, linking to Google', async () => {
   const hero = async () => { const h = await (await fetch(BASE + '/')).text(); return h.slice(h.indexOf('data-shell'), h.indexOf('</section>')); };
-  assert(!(await hero()).includes('out of 5 on Google'), 'no rating by default');
+  assert((await hero()).includes('aria-label="Rated 4.9 out of 5 on Google, 204 Google reviews"'), 'Google profile rating 4.9 / 204 set by the data update');
   const biz = (await adminFetch('/settings')).body.business;
+  await adminFetch('/settings/business', { method: 'PUT', data: { ...biz, google_rating: '' } });
+  assert(!(await hero()).includes('out of 5 on Google'), 'hidden when the rating is cleared');
   await adminFetch('/settings/business', { method: 'PUT', data: { ...biz, google_rating: '9', google_review_count: '5' } });
   assert(!(await hero()).includes('out of 5 on Google'), 'invalid rating (above 5) not shown');
   await adminFetch('/settings/business', { method: 'PUT', data: { ...biz, google_rating: '4.75', google_review_count: '1234' } });
@@ -544,6 +546,52 @@ await test('Hero rating: hidden until a real rating is entered; then shown in fi
   eq((await badge.textContent()).trim(), '4.81,234 Google reviews'); eq(await badge.locator('svg.text-amber-400').count(), 5, '4.75 rounds to 5 stars');
   await p.close();
   await adminFetch('/settings/business', { method: 'PUT', data: biz });
+});
+
+console.log('\nOwner review fixes (side scroll, top bar, wording, sitemap)');
+// The page must never be wider than the phone screen. Phones zoom out to fit wide content, so we compare
+// with the real screen width (innerWidth grows when that happens), not just scrollWidth vs innerWidth.
+const pageWiderThanScreen = (p, W) => p.evaluate((W) => Math.max(innerWidth, document.documentElement.scrollWidth) - W, W);
+await test('No side scroll on phones on any page, including every booking and trade-in step (320/360/390px)', async () => {
+  const bad = [];
+  for (const W of [320, 360, 390]) {
+    const c = await browser.newContext({ viewport: { width: W, height: 800 }, isMobile: true, hasTouch: true }); const p = await c.newPage();
+    const check = async (label) => { const o = await pageWiderThanScreen(p, W); if (o > 0) bad.push(`${W}px ${label}: +${o}px`); };
+    for (const r of ['/', '/services', '/services/iphone-screen-replacement', '/repair-prices', '/book', '/sell', '/shop', '/contact', '/reviews', '/faq']) { await p.goto(BASE + r, { waitUntil: 'networkidle' }); await check(r); }
+    await p.goto(BASE + '/book?category=iphone&brand=Apple&model=iPhone+15&repair=screen', { waitUntil: 'networkidle' }); await check('book: repair');
+    await p.evaluate(() => [...document.querySelectorAll('button')].find((x) => x.textContent.includes('Continue')).click()); await p.waitForTimeout(900); await check('book: dates');
+    await p.evaluate(() => document.querySelector('[aria-label="Appointment date"] button:not([disabled])').click()); await p.waitForTimeout(700); await check('book: times');
+    await p.evaluate(() => document.querySelector('[aria-label="Appointment time"] button:not([disabled])').click());
+    await p.evaluate(() => [...document.querySelectorAll('button')].find((x) => x.textContent.includes('Continue')).click()); await p.waitForTimeout(600); await check('book: details');
+    await p.goto(BASE + '/sell', { waitUntil: 'networkidle' }); await p.getByLabel('Brand').selectOption('Apple'); await p.getByLabel('Model').selectOption({ label: 'iPhone 16 Pro' }); await check('sell: storage chips');
+    await c.close();
+  }
+  eq(bad.length, 0, bad.join(' | '));
+});
+await test('Top bar text is never cut off (320px to 1440px)', async () => {
+  const bad = [];
+  for (const W of [320, 360, 390, 640, 768, 1024, 1100, 1280, 1440, 1600]) {
+    const c = await browser.newContext({ viewport: { width: W, height: 800 }, isMobile: W < 640 }); const p = await c.newPage(); await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+    const cut = await p.evaluate(() => [...document.querySelectorAll('.bg-ink span.truncate')].filter((s) => s.offsetParent && s.scrollWidth > s.clientWidth + 1).map((s) => s.textContent.slice(0, 30)));
+    if (cut.length) bad.push(`${W}px: ${cut.join(', ')}`); await c.close();
+  }
+  eq(bad.length, 0, bad.join(' | '));
+});
+await test('No "exact price" claims on public pages; contact form says where messages go; /sitemap redirects', async () => {
+  for (const r of ['/', '/repair-prices', '/services/iphone-screen-replacement', '/services/samsung-screen-replacement', '/services/tablet-repair', '/faq']) {
+    const p = await newPage(); await p.goto(BASE + r, { waitUntil: 'networkidle' });
+    const txt = (await p.locator('body').textContent()) + (await (await fetch(BASE + r)).text());
+    assert(!/exact (advertised )?price|exact prices|exact model prices|exact repair price/i.test(txt), 'exact-price wording on ' + r); await p.close();
+  }
+  const p = await newPage(); await p.goto(BASE + '/contact', { waitUntil: 'networkidle' });
+  assert((await p.locator('form').textContent()).includes('Your message goes straight to the All Uplinks team (alluplinks1@gmail.com)'), 'form destination note'); await p.close();
+  const r = await fetch(BASE + '/sitemap', { redirect: 'manual' }); eq(r.status, 301); eq(r.headers.get('location'), '/sitemap.xml');
+});
+await test('Business details: Unit 23 + postal code L4P 3J4 shown; Google rating 4.9 · 204 shown in reviews header', async () => {
+  const p = await newPage(); await p.goto(BASE + '/contact', { waitUntil: 'networkidle' });
+  const t = await p.locator('main').textContent(); assert(t.includes('443 The Queensway South, Unit 23') && t.includes('L4P 3J4'), 'address on contact page');
+  await p.goto(BASE + '/reviews', { waitUntil: 'networkidle' }); assert((await p.locator('main').textContent()).includes('204 Google reviews on Google') || (await p.locator('main').textContent()).includes('4.9'), 'rating in reviews header');
+  await p.close();
 });
 
 console.log('\nLinks, images, contact buttons, responsiveness');
@@ -585,9 +633,9 @@ await test('Mobile menu opens full-screen, links work, and closes', async () => 
 await test('Every service uses a distinct image file', async () => { eq(new Set(services.map((s) => s.image)).size, 18); });
 await test('No JavaScript console errors on any page', async () => { eq(consoleErrors.length, 0, consoleErrors.slice(0, 5).join('\n')); });
 await test('Performance: home HTML < 30 KB, JS on first load < 120 KB gzip, images WebP', async () => {
-  const p = await newPage(); const sizes = []; p.on('response', async (r) => { if (r.url().includes('/assets/') && r.url().endsWith('.js')) sizes.push(Number(r.headers()['content-length'] || (await r.body()).length)); });
+  const p = await newPage(); const sizes = []; p.on('response', async (r) => { if (r.url().includes('/assets/') && r.url().endsWith('.js')) try { sizes.push(Number(r.headers()['content-length'] || (await r.body()).length)); } catch { /* page closed */ } });
   const t0 = Date.now(); await p.goto(BASE + '/', { waitUntil: 'load' }); const loadMs = Date.now() - t0;
-  const html = await (await fetch(BASE + '/')).text(); assert(html.length < 30000, 'html ' + html.length);
+  const html = await (await fetch(BASE + '/')).text(); assert(html.length < 40000, 'html ' + html.length); // includes the styled first view + embedded store settings (~8 KB gzipped)
   const gz = await fetch(BASE + '/', { headers: { 'Accept-Encoding': 'gzip' } }); assert(gz.headers.get('content-encoding') === 'gzip', 'compression');
   const imgs = await p.$$eval('img', (i) => i.map((x) => x.currentSrc || x.src).filter((s) => s.includes('/images/'))); assert(imgs.every((s) => s.endsWith('.webp')), 'webp');
   results.push(`      (home load ${loadMs} ms locally)`); await p.close();

@@ -7,7 +7,7 @@ const CatalogCtx = createContext(null);
 // Fallback values match the seeded settings so the shell renders instantly before /api/site responds.
 const FALLBACK = {
   business: { name: 'All Uplinks', legal_name: 'All Uplinks - Phone Repair Keswick', street: '443 The Queensway South', city: 'Keswick', region: 'ON', region_name: 'Ontario', country: 'CA', phone_display: '905-535-9503', phone_tel: '+19055359503', email: '', site_url: 'https://alluplinks.com', maps_query: 'All Uplinks - Phone Repair Keswick, 443 The Queensway South, Keswick, Ontario, Canada' },
-  hours: [], content: { hero_eyebrow: 'Keswick, Ontario', hero_title: 'Phone repair in Keswick — fixed fast, priced upfront.', hero_subtitle: 'Screens, batteries, charging ports and more for iPhone, Samsung, Google Pixel, iPad, laptops and game consoles. See your exact price online, then book a time at our Queensway South store.', announcement_short: 'Upfront prices · Book online' }, pricing: { variance: 60, note: '' }, warranty: { text: '' }, faqs: [], reviews: [], services: [], loading: true
+  hours: [], content: { hero_eyebrow: 'Keswick, Ontario', hero_title: 'Phone repair in Keswick — fixed fast, priced upfront.', hero_subtitle: 'Screens, batteries, charging ports and more for iPhone, Samsung, Google Pixel, iPad, laptops and game consoles. See your price range online, then book a time at our Queensway South store.', announcement_short: 'Upfront prices · Book online' }, pricing: { variance: 60, note: '' }, warranty: { text: '' }, faqs: [], reviews: [], services: [], loading: true
 };
 
 // The server embeds the live store settings in the page (<script id="__SITE__">), so the very first render

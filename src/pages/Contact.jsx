@@ -69,6 +69,7 @@ export default function Contact() {
               </div>
               {s.error && !Object.keys(s.errors).length && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200" role="alert">{s.error}</p>}
               <button className="btn-primary btn-lg w-full sm:w-auto" disabled={s.status === 'sending'}>{s.status === 'sending' ? 'Sending…' : 'Send message'}</button>
+              <p className="text-xs leading-relaxed text-ink-400">Your message goes straight to the All Uplinks team{b.email ? ` (${b.email})` : ''}. We’ll reply by email or phone.</p>
             </form>
           )}
         </div>

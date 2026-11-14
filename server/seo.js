@@ -72,7 +72,7 @@ async function meta(pathname, preload) {
       h1: `${s.name} in ${b.city}`, intro: s.description, ld: [business(), svc, crumbs(site, [['Services', '/services'], [s.name, p]]), faqLd(faqs)].filter(Boolean) };
   }
   if (p === '/repair-prices') return { ...base, title: `Phone Repair Prices in ${b.city}, ON — Instant Quote | All Uplinks`,
-    description: 'Get the exact repair price for your iPhone, Samsung, Pixel, iPad, laptop, MacBook or game console in CAD. Choose your model and repair to see your price and repair time.',
+    description: 'Get the repair price range for your iPhone, Samsung, Pixel, iPad, laptop, MacBook or game console in CAD. Choose your model and repair to see your price and repair time.',
     h1: 'Repair price calculator', intro: 'Choose your device, model and repair to see your price in CAD.', ld: [business(), crumbs(site, [['Repair prices', '/repair-prices']])] };
   if (p === '/book') return { ...base, title: `Book a Phone Repair in ${b.city} | All Uplinks`,
     description: `Book your phone, tablet, laptop or console repair online at All Uplinks, ${b.street}, ${loc}. Choose your repair, see your estimate and pick a time.`,

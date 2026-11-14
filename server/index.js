@@ -633,6 +633,7 @@ app.get('/robots.txt', (_req, res) => {
   const site = getSetting('business').site_url;
   res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${site}/sitemap.xml\n`);
 });
+app.get('/sitemap', (_req, res) => res.redirect(301, '/sitemap.xml'));
 app.get('/sitemap.xml', wrap(async (_req, res) => res.type('application/xml').send(await sitemapXml())));
 
 if (fs.existsSync(DIST)) {

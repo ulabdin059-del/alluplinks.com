@@ -23,9 +23,8 @@ function Announcement() {
     <div className="bg-ink text-white">
       <div className="container-x flex items-center justify-between gap-4 py-2 text-[13px] font-medium">
         <p className="flex min-w-0 items-center gap-2">
-          <MapleLeaf className="h-3.5 w-3.5 shrink-0 text-brand-400" />
-          <span className="truncate sm:hidden">{content?.announcement_short || 'Upfront prices · Book online'}</span>
-          <span className="hidden truncate sm:inline">{content?.announcement}</span>
+          <MapleLeaf className="hidden h-3.5 w-3.5 shrink-0 text-brand-400 min-[360px]:block" />
+          <span className="truncate" title={content?.announcement || undefined}>{content?.announcement_short || 'Upfront prices · Book online'}</span>
           <Link to="/repair-prices" className="ml-1 hidden shrink-0 items-center gap-1 font-semibold text-brand-300 hover:text-white md:inline-flex">Check your price <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
         </p>
         <a href={telHref(business)} className="shrink-0 font-semibold text-white sm:hidden">{business.phone_display}</a>
@@ -83,7 +82,7 @@ function Header() {
 
   return (
     <header className={cx('sticky top-0 z-40 border-b bg-white/90 backdrop-blur-lg transition-shadow', scrolled ? 'border-mist-200 shadow-[0_6px_24px_-16px_rgba(15,29,58,.25)]' : 'border-transparent')}>
-      <div className="container-x flex h-[72px] items-center justify-between gap-6">
+      <div className="container-x flex h-[72px] items-center justify-between gap-3 sm:gap-6">
         <Link to="/" aria-label="All Uplinks home"><Logo /></Link>
         <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
           {NAV.map((n) => n.mega ? (
@@ -99,7 +98,7 @@ function Header() {
             <NavLink key={n.to} to={n.to} className={({ isActive }) => cx('rounded-lg px-3.5 py-2 text-[15px] font-medium transition hover:bg-mist-100 hover:text-ink', isActive ? 'text-brand-700' : 'text-ink-600')}>{n.label}</NavLink>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <a href={telHref(business)} className="hidden items-center gap-2 rounded-lg px-3 py-2 text-[15px] font-semibold text-ink hover:text-brand-700 xl:inline-flex">
             <Phone className="h-4 w-4 text-brand-600" aria-hidden="true" />{business.phone_display}
           </a>

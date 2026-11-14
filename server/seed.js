@@ -46,11 +46,11 @@ export const DEFAULT_SETTINGS = {
     announcement_short: 'Upfront prices · Book online',
     hero_eyebrow: 'Keswick, Ontario',
     hero_title: 'Phone repair in Keswick — fixed fast, priced upfront.',
-    hero_subtitle: 'Screens, batteries, charging ports and more for iPhone, Samsung, Google Pixel, iPad, laptops and game consoles. See your exact price online, then book a time at our Queensway South store.',
+    hero_subtitle: 'Screens, batteries, charging ports and more for iPhone, Samsung, Google Pixel, iPad, laptops and game consoles. See your price range online, then book a time at our Queensway South store.',
     about_title: 'A local repair shop that respects your time and your device',
     about_body: 'All Uplinks is a Keswick repair store on The Queensway South. We fix phones, tablets, laptops and consoles, buy and trade in used devices, and stock the accessories that keep them protected and charged. Every price on this site is specific to your model, so you know what to expect before you walk in.',
     cta_title: 'Ready to get your device working again?',
-    cta_body: 'Check your exact price, pick a time that suits you, and we’ll have everything ready when you arrive.'
+    cta_body: 'Check your price, pick a time that suits you, and we’ll have everything ready when you arrive.'
   },
   pricing: {
     variance: 60,
@@ -136,10 +136,10 @@ export const SERVICES = [
     time_estimate: T.screen,
     faqs: [
       { q: 'Will my Face ID still work after a screen replacement?', a: 'Face ID components sit in the notch area and are carefully transferred during the repair. We test Face ID with you before you leave.' },
-      { q: 'Why do newer iPhone screens cost more?', a: 'Newer and Pro models use larger, higher-refresh OLED panels that cost more to source. Our calculator shows the exact advertised price for your model.' }
+      { q: 'Why do newer iPhone screens cost more?', a: 'Newer and Pro models use larger, higher-refresh OLED panels that cost more to source. Our calculator shows the advertised price range for your model.' }
     ],
     meta_title: 'iPhone Screen Replacement Keswick | All Uplinks',
-    meta_description: 'iPhone screen replacement in Keswick, ON. Exact prices for iPhone 6 to iPhone 18 Pro Max in CAD, most repairs done in 30–60 minutes. Book online at All Uplinks.'
+    meta_description: 'iPhone screen replacement in Keswick, ON. Prices for iPhone 6 to iPhone 18 Pro Max in CAD, most repairs done in 30–60 minutes. Book online at All Uplinks.'
   },
   {
     slug: 'iphone-battery-replacement', name: 'iPhone Battery Replacement', featured: true,
@@ -169,7 +169,7 @@ export const SERVICES = [
       { q: 'Do you repair Galaxy Z Fold and Z Flip screens?', a: 'Yes. Foldable screen prices are listed in our calculator for each supported model.' }
     ],
     meta_title: 'Samsung Screen Replacement Keswick | All Uplinks',
-    meta_description: 'Samsung Galaxy screen repair in Keswick, ON — S series, Z Fold, Z Flip, Note and A series. Exact model prices in CAD. Book online at All Uplinks.'
+    meta_description: 'Samsung Galaxy screen repair in Keswick, ON — S series, Z Fold, Z Flip, Note and A series. Model-by-model prices in CAD. Book online at All Uplinks.'
   },
   {
     slug: 'samsung-battery-replacement', name: 'Samsung Battery Replacement', featured: true,
@@ -181,7 +181,7 @@ export const SERVICES = [
     time_estimate: T.battery,
     faqs: [{ q: 'Can I check my Samsung battery health?', a: 'Open the Samsung Members app → Support → Phone diagnostics → Battery status. A “weak” or “bad” result means a replacement will help.' }],
     meta_title: 'Samsung Battery Replacement Keswick | All Uplinks',
-    meta_description: 'Samsung Galaxy battery replacement in Keswick, Ontario. See your exact price in CAD and book online with All Uplinks.'
+    meta_description: 'Samsung Galaxy battery replacement in Keswick, Ontario. See your price in CAD and book online with All Uplinks.'
   },
   {
     slug: 'charging-port-repair', name: 'Charging Port Repair', featured: true,
@@ -193,7 +193,7 @@ export const SERVICES = [
     time_estimate: T.port,
     faqs: [{ q: 'Could my charging problem just be the cable?', a: 'Sometimes. We test with a known-good cable and charger first so you only pay for a repair if the port is actually the problem.' }],
     meta_title: 'Charging Port Repair Keswick | iPhone & Samsung | All Uplinks',
-    meta_description: 'Phone charging port repair in Keswick, ON for iPhone, Samsung Galaxy and Google Pixel. Exact model prices in CAD. Book online at All Uplinks.'
+    meta_description: 'Phone charging port repair in Keswick, ON for iPhone, Samsung Galaxy and Google Pixel. Model-by-model prices in CAD. Book online at All Uplinks.'
   },
   {
     slug: 'back-glass-replacement', name: 'Back Glass Replacement', featured: true,
@@ -215,7 +215,7 @@ export const SERVICES = [
     price_source: { categories: ['iphone', 'samsung', 'google-pixel'], repairs: ['camera'] },
     time_estimate: T.camera,
     meta_title: 'Phone Camera Repair Keswick | All Uplinks',
-    meta_description: 'iPhone, Samsung and Pixel camera repair in Keswick, ON. Exact prices in CAD by model. Book online at All Uplinks.'
+    meta_description: 'iPhone, Samsung and Pixel camera repair in Keswick, ON. Prices in CAD by model. Book online at All Uplinks.'
   },
   {
     slug: 'water-damage-repair', name: 'Water Damage Repair', featured: true,
@@ -275,7 +275,7 @@ export const SERVICES = [
   {
     slug: 'tablet-repair', name: 'Tablet Repair', featured: false,
     short: 'Samsung Galaxy Tab and Android tablet screens, batteries and charging ports.',
-    description: 'We repair Samsung Galaxy Tab models and many other Android tablets. For listed models you can see the exact price now; for anything else, book an assessment and we’ll confirm parts and pricing.',
+    description: 'We repair Samsung Galaxy Tab models and many other Android tablets. For listed models you can see the price now; for anything else, book an assessment and we’ll confirm parts and pricing.',
     benefits: ['Galaxy Tab screen, battery and port repair', 'Other tablet brands assessed', 'Touch and charging tested before pickup', 'Price confirmed before work begins'],
     image: 'svc-tablet', image_alt: 'Hand holding a tablet showing its home screen',
     price_source: { categories: ['tablet'], repairs: ['screen', 'battery', 'port'] },

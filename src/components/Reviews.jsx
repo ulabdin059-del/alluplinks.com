@@ -4,6 +4,7 @@ import { useSite } from '../lib/site.jsx';
 import { api } from '../lib/api.js';
 import { Field, Stars } from './ui.jsx';
 import { cx } from '../lib/utils.js';
+import { googleRating } from '../../shared/rating.js';
 
 const GoogleG = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>
@@ -90,6 +91,7 @@ export default function ReviewsSection({ limit = 6, showForm = false }) {
   const list = all.slice(0, limit);
   const google = all.filter((r) => String(r.source || '').toLowerCase() === 'google');
   const rated = google.length ? google : all;
+  const profile = googleRating(business);
   const avg = rated.length ? rated.reduce((a, r) => a + r.rating, 0) / rated.length : 0;
   const readUrl = business.google_review_url;
   const writeUrl = business.google_write_review_url || business.google_review_url;
@@ -101,7 +103,11 @@ export default function ReviewsSection({ limit = 6, showForm = false }) {
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-mist-50 ring-1 ring-mist-200"><GoogleG /></span>
           <div>
             <p className="flex items-center gap-2 font-display text-lg font-bold"><GoogleWordmark className="h-5 w-auto" /><span>Reviews</span></p>
-            {rated.length > 0 ? (
+            {profile ? (
+              // Overall Google profile rating entered by the owner (covers all reviews on Google, not only the ones shown here).
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600"><span className="text-xl font-extrabold text-ink">{profile.value}</span><Stars value={profile.stars} />
+                <span>· {profile.count} on Google</span></p>
+            ) : rated.length > 0 ? (
               <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600"><span className="text-xl font-extrabold text-ink">{avg.toFixed(1)}</span><Stars value={Math.round(avg)} />
                 <span>· {rated.length} {google.length ? 'Google review' : 'review'}{rated.length > 1 ? 's' : ''} shown</span></p>
             ) : <p className="mt-1 text-sm text-ink-500">See what customers say about All Uplinks on Google.</p>}

@@ -55,9 +55,9 @@ function Hero() {
             <Link to="/book" className="btn-primary btn-lg px-4 sm:px-7"><CalendarCheck className="h-5 w-5" aria-hidden="true" />Book a Repair</Link>
             <a href={telHref(b)} className="btn-dark btn-lg px-4 sm:px-7"><Phone className="h-5 w-5" aria-hidden="true" />Call Now</a>
           </div>
-          <Link to="/repair-prices" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline">Or see your exact price in 30 seconds<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+          <Link to="/repair-prices" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline">Or check your price in 30 seconds<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
           <ul className="mt-7 flex flex-col gap-2 text-sm font-medium text-ink-600 sm:flex-row sm:flex-wrap sm:gap-x-5">
-            {[[BadgeDollarSign, 'Exact prices by model'], [Timer, 'Most repairs under an hour'], [CalendarCheck, 'Book online 24/7']].map(([I, t]) => (
+            {[[BadgeDollarSign, 'Upfront prices by model'], [Timer, 'Most repairs under an hour'], [CalendarCheck, 'Book online 24/7']].map(([I, t]) => (
               <li key={t} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-brand-600" aria-hidden="true" />{t}</li>
             ))}
           </ul>
@@ -117,7 +117,7 @@ function CalculatorSection() {
   return (
     <section id="price-calculator" className="section scroll-mt-20 bg-mist-100/70">
       <div className="container-x">
-        <SectionHeading eyebrow="Repair price calculator" title="See your exact price in four taps" center>Choose your device, model and repair. Your price in CAD and estimated repair time appear instantly — then book in one click.</SectionHeading>
+        <SectionHeading eyebrow="Repair price calculator" title="See your price in four taps" center>Choose your device, model and repair. Your price in CAD and estimated repair time appear instantly — then book in one click.</SectionHeading>
         <div className="reveal mx-auto mt-12 max-w-6xl"><PriceCalculator headingLevel="h3" /></div>
       </div>
     </section>
@@ -126,7 +126,7 @@ function CalculatorSection() {
 
 function WhyUs() {
   const items = [
-    [BadgeDollarSign, 'Upfront, model-specific pricing', 'Every listed price is for your exact model and repair. No vague “starting from” guesswork — and the price is confirmed with you before work begins.'],
+    [BadgeDollarSign, 'Upfront pricing by model', 'See the price range for your model and repair before you visit. The final price is confirmed with you before any work begins.'],
     [Timer, 'Most repairs in one visit', 'Screen, battery and charging port repairs typically take under an hour, so you can wait or grab a coffee nearby.'],
     [Cpu, 'Board-level capability', 'Micro soldering, motherboard and water damage diagnostics mean we can tackle faults beyond simple part swaps.'],
     [ShieldCheck, 'Your data stays private', 'Common repairs don’t require a reset. Your device stays on our bench, not in a mail-in queue.'],
