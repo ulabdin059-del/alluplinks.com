@@ -1,7 +1,7 @@
 name: CI
 # Builds the site and runs the full end-to-end test suite on every push and pull request:
 #   • SQLite (local/Turso dialect), including a restore into MySQL — the Render/Turso → Hostinger migration path
-#   • MySQL 8 and MariaDB 11 (Hostinger databases)
+#   • MySQL 8, MariaDB 11.4 and MariaDB 10.5 (Hostinger's current database version)
 # Render deploys `main` only after these checks pass (autoDeployTrigger: checksPass in render.yaml).
 on:
   push:
@@ -26,6 +26,8 @@ jobs:
             image: mysql:8.0
           - db: mariadb
             image: mariadb:11.4
+          - db: mariadb-10.5
+            image: mariadb:10.5
     services:
       database:
         image: ${{ matrix.image }}
