@@ -4,6 +4,7 @@ import { renderShell } from './shell.js';
 // Accepts either a JSON string (raw row) or an already-parsed value (cached row).
 const j = (v, f) => (typeof v === 'string' ? parseJson(v, f) : v ?? f);
 import { SHOP_CATEGORIES, SHOP_BRANDS } from '../shared/constants.js';
+import { hasBreak } from '../shared/hours.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`;
@@ -25,7 +26,8 @@ function business() {
   if (b.email) o.email = b.email;
   if (b.google_review_url) o.sameAs = [b.google_review_url];
   const open = hours.filter((h) => !h.closed && h.open && h.close);
-  if (open.length) o.openingHoursSpecification = open.map((h) => ({ '@type': 'OpeningHoursSpecification', dayOfWeek: h.day, opens: h.open, closes: h.close }));
+  const spec = (day, opens, closes) => ({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens, closes });
+  if (open.length) o.openingHoursSpecification = open.flatMap((h) => (hasBreak(h) ? [spec(h.day, h.open, h.break_start), spec(h.day, h.break_end, h.close)] : [spec(h.day, h.open, h.close)]));
   return o;
 }
 const crumbs = (site, items) => ({ '@context': 'https://schema.org', '@type': 'BreadcrumbList',

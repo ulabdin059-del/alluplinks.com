@@ -6,7 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'node:url';
-import { SERVICES, PRODUCTS, FAQS, CATEGORIES, REPAIR_TYPES, DEFAULT_SETTINGS, STORE_HOURS, BOOKING_WEEKLY } from './seed.js';
+import { SERVICES, PRODUCTS, FAQS, CATEGORIES, REPAIR_TYPES, DEFAULT_SETTINGS, STORE_HOURS, BOOKING_WEEKLY, OLD_STORE_HOURS, OLD_BOOKING_WEEKLY } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'storage');
@@ -330,6 +330,13 @@ DATA_UPDATES.push(async () => { // 2026-11: details from the Google Business Pro
   const S = [];
   for (const [a, b] of PHRASES) for (const col of ['short', 'description', 'meta_description', 'faqs']) S.push([`UPDATE services SET ${col} = REPLACE(${col}, ?, ?) WHERE ${col} LIKE ?`, a, b, `%${a}%`]);
   await db.batch(S);
+});
+DATA_UPDATES.push(async () => { // 2026-11: store hours and booking windows from the Google Business Profile
+  // Only replaces the previous defaults; hours the owner has edited in the dashboard are kept.
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (same(getSetting('hours'), OLD_STORE_HOURS)) await setSetting('hours', STORE_HOURS);
+  const booking = getSetting('booking');
+  if (booking && same(booking.weekly, OLD_BOOKING_WEEKLY)) await setSetting('booking', { ...booking, weekly: BOOKING_WEEKLY });
 });
 async function applyDataUpdates() {
   const done = getSetting('data_version') || 0;

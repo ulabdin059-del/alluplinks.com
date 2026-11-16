@@ -75,7 +75,8 @@ await test('LocalBusiness, Service, FAQPage, Product and Breadcrumb schema prese
   const get = async (p) => [...(await (await fetch(BASE + p)).text()).matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
   const home = await get('/'); const lb = home.find((x) => Array.isArray(x['@type']) && x['@type'].includes('LocalBusiness'));
   eq(lb.telephone, '+19055359503'); eq(lb.address.streetAddress, '443 The Queensway South, Unit 23'); eq(lb.address.postalCode, 'L4P 3J4'); eq(lb.address.addressLocality, 'Keswick');
-  eq(lb.openingHoursSpecification.length, 7, 'opening hours in schema'); eq(lb.openingHoursSpecification[0].opens, '09:00'); eq(lb.sameAs[0], 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); assert(home.some((x) => x['@type'] === 'FAQPage'), 'FAQPage');
+  eq(lb.openingHoursSpecification.length, 8, 'opening hours in schema (Friday split by its break)'); eq(lb.openingHoursSpecification[0].opens, '09:30'); eq(lb.openingHoursSpecification[0].closes, '18:30');
+  eq(JSON.stringify(lb.openingHoursSpecification.filter((h) => h.dayOfWeek === 'Friday').map((h) => [h.opens, h.closes])), JSON.stringify([['10:00', '13:45'], ['14:15', '19:00']]), 'Friday break in schema'); eq(lb.sameAs[0], 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); assert(home.some((x) => x['@type'] === 'FAQPage'), 'FAQPage');
   const svc = await get('/services/iphone-screen-replacement'); const s = svc.find((x) => x['@type'] === 'Service');
   eq(s.offers.priceCurrency, 'CAD'); eq(s.offers.lowPrice, 55); eq(s.offers.highPrice, 200); assert(svc.some((x) => x['@type'] === 'BreadcrumbList'));
   assert((await get('/shop/product/apple-airpods-pro')).some((x) => x['@type'] === 'Product'), 'Product');
@@ -302,16 +303,29 @@ await test('Admin can publish verified store hours → shown on site and in Loca
   const html = await (await fetch(BASE + '/contact')).text(); assert(html.includes('OpeningHoursSpecification'), 'schema hours');
   await adminFetch('/settings/hours', { method: 'PUT', data: original });
 });
-await test('Booking slots match store hours: 30-min slots, 9:00–16:30 weekdays, 10:00–15:30 weekends, 14 days ahead', async () => {
+await test('Booking slots match Google store hours (Mon–Thu 9:30–6:30, Fri 10–7 with break, Sat 10–6, Sun 11–4:30), 14 days ahead', async () => {
   const days = (await json('/api/availability')).body.days; eq(days.length, 15, 'today + 14 days');
-  const wk = days.find((d) => { const g = new Date(d.date + 'T12:00:00Z').getUTCDay(); return g >= 1 && g <= 5 && d.date !== days[0].date; });
-  const we = days.find((d) => { const g = new Date(d.date + 'T12:00:00Z').getUTCDay(); return (g === 0 || g === 6) && d.date !== days[0].date; });
-  const a = (await json('/api/slots?date=' + wk.date)).body.slots; eq(a[0].time, '09:00'); eq(a.at(-1).time, '16:30'); eq(a.length, 16);
-  const b = (await json('/api/slots?date=' + we.date)).body.slots; eq(b[0].time, '10:00'); eq(b.at(-1).time, '15:30'); eq(b.length, 12);
+  const pick = (dows) => days.find((d) => dows.includes(new Date(d.date + 'T12:00:00Z').getUTCDay()) && d.date !== days[0].date);
+  const slots = async (d) => (await json('/api/slots?date=' + d.date)).body.slots.map((x) => x.time);
+  const wk = await slots(pick([1, 2, 3, 4])); eq(wk[0], '09:30'); eq(wk.at(-1), '18:00'); eq(wk.length, 18);
+  const fr = await slots(pick([5])); eq(fr[0], '10:00'); eq(fr.at(-1), '18:30'); assert(!fr.includes('13:30') && !fr.includes('14:00'), 'no slots in the 1:45–2:15 break'); assert(fr.includes('13:00') && fr.includes('14:30'), 'slots around the break'); eq(fr.length, 16);
+  const sa = await slots(pick([6])); eq(sa[0], '10:00'); eq(sa.at(-1), '17:30'); eq(sa.length, 16);
+  const su = await slots(pick([0])); eq(su[0], '11:00'); eq(su.at(-1), '16:00'); eq(su.length, 11);
+  const fri = pick([5]); const r = await json('/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ category: 'iphone', brand: 'Apple', model: 'iPhone 15', repairs: ['screen'], date: fri.date, time: '14:00', name: 'Break Test', email: 'break@example.com', phone: '905-555-0100' }) });
+  assert(r.status >= 400, 'booking inside the break is refused (got ' + r.status + ')');
+});
+await test('Store status handles the Friday break (Toronto time)', async () => {
+  const { storeStatus } = await import('../shared/hours.js');
+  const hours = (await json('/api/site')).body.hours;
+  const at = (iso) => storeStatus(hours, new Date(iso)).label; // 2026-11-20 is a Friday; Toronto = UTC−5
+  eq(at('2026-11-20T18:00:00Z'), 'Open now · break at 1:45 p.m.'); eq(at('2026-11-20T18:50:00Z'), 'On a short break · back at 2:15 p.m.');
+  eq(at('2026-11-20T19:20:00Z'), 'Open now · until 7 p.m.'); eq(at('2026-11-19T14:00:00Z'), 'Closed · opens today 9:30 a.m.');
+  eq(at('2026-11-22T22:00:00Z'), 'Closed · opens tomorrow 9:30 a.m.');
 });
 await test('Store hours shown on contact page; Google reviews link present', async () => {
   const p = await newPage(); await p.goto(BASE + '/contact', { waitUntil: 'networkidle' });
-  assert(await p.getByText('9 a.m. – 5 p.m.').first().isVisible(), 'weekday hours'); assert(await p.getByText('10 a.m. – 4 p.m.').first().isVisible(), 'weekend hours');
+  assert(await p.getByText('9:30 a.m. – 6:30 p.m.').first().isVisible(), 'weekday hours'); assert(await p.getByText('10 a.m. – 7 p.m.').first().isVisible(), 'Friday hours'); assert(await p.getByText('Break 1:45 – 2:15 p.m.').first().isVisible(), 'Friday break');
+  assert(await p.getByText('11 a.m. – 4:30 p.m.').first().isVisible(), 'Sunday hours');
   await p.goto(BASE + '/', { waitUntil: 'networkidle' });
   eq(await p.getByRole('link', { name: /Read All Google Reviews/ }).first().getAttribute('href'), 'https://maps.app.goo.gl/aShYzmUiNqCu9nHr8'); await p.close();
 });
@@ -581,6 +595,19 @@ await test('Email: existing database — public email set if empty (never overwr
     eq(out.pub, expectPublic, 'public email'); eq(JSON.stringify(out.admins), JSON.stringify([OWNER_EMAIL]), 'admin login email'); eq(out.pw, true, 'password unchanged');
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+await test('Hours: existing database on the old default hours moves to the Google hours; owner-edited hours are kept', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const run = (dir, js) => execFileSync(process.execPath, ['--no-warnings', '--input-type=module', '-e', js], { cwd: ROOT, env: { ...process.env, DATA_DIR: dir, ADMIN_PASSWORD: 'x-unused-123' }, encoding: 'utf8' }).trim().split('\n').pop();
+  const setup = (hours) => `const m = await import('./server/db.js'); const s = await import('./server/seed.js'); await m.ready; await m.setSetting('hours', ${hours}); await m.setSetting('booking', { ...m.getSetting('booking'), weekly: s.OLD_BOOKING_WEEKLY }); await m.setSetting('data_version', 3); console.log('ok');`;
+  const read = "const m = await import('./server/db.js'); await m.ready; console.log(JSON.stringify({ h: m.getSetting('hours'), w: m.getSetting('booking').weekly }));";
+  const a = fs.mkdtempSync(path.join(os.tmpdir(), 'au-hours-'));
+  run(a, setup('s.OLD_STORE_HOURS')); const ra = JSON.parse(run(a, read));
+  eq(ra.h[0].open, '09:30'); eq(ra.h[4].break_start, '13:45'); eq(ra.w[5].break_end, '14:15'); eq(ra.w[0].close, '16:30');
+  const b = fs.mkdtempSync(path.join(os.tmpdir(), 'au-hours-'));
+  run(b, setup("s.OLD_STORE_HOURS.map((d) => ({ ...d, open: '08:00' }))")); const rb = JSON.parse(run(b, read));
+  eq(rb.h[0].open, '08:00', 'edited store hours kept'); eq(rb.w[1].open, '09:30', 'untouched booking windows updated');
+  for (const d of [a, b]) fs.rmSync(d, { recursive: true, force: true });
 });
 await test('Email: admin can change the sign-in email from Account (password required)', async () => {
   eq((await adminFetch('/email', { method: 'POST', data: { email: 'new-login@example.com', current: 'wrong' } })).status, 400, 'wrong password rejected');

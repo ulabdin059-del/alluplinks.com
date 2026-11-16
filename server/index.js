@@ -91,7 +91,9 @@ function buildSlots(date, isBlocked, countAt) {
   const win = cfg.weekly?.[new Date(date + 'T12:00:00Z').getUTCDay()];
   if (!win) return { slots: [], reason: 'No appointments on this day' };
   const out = [];
+  const brk = win.break_start && win.break_end ? [toMin(win.break_start), toMin(win.break_end)] : null;
   for (let m = toMin(win.open); m + cfg.slot_minutes <= toMin(win.close); m += cfg.slot_minutes) {
+    if (brk && m < brk[1] && m + cfg.slot_minutes > brk[0]) continue; // overlaps the break
     const t = toHM(m);
     const tooSoon = date === now.date && m < now.minutes + (cfg.min_lead_minutes || 0);
     out.push({ time: t, label: fmtTime(t), available: !tooSoon && countAt(t) < cfg.capacity });

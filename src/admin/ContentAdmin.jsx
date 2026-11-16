@@ -84,6 +84,21 @@ function SettingsCard({ title, description, fields, value, onSave }) {
   );
 }
 
+// Optional mid-day break for one day (store hours and booking windows).
+export function BreakInputs({ label, value, onChange }) {
+  const on = !!(value.break_start || value.break_end);
+  const clear = () => { const { break_start: _a, break_end: _b, ...rest } = value; onChange(rest); };
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-sm">
+      <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 rounded" checked={on}
+        onChange={(e) => (e.target.checked ? onChange({ ...value, break_start: '13:00', break_end: '13:30' }) : clear())} />Break</label>
+      {on && <><input type="time" className="input w-32 py-1.5" value={value.break_start || ''} aria-label={`${label} break starts`} onChange={(e) => onChange({ ...value, break_start: e.target.value })} />
+        <span className="text-ink-400">to</span>
+        <input type="time" className="input w-32 py-1.5" value={value.break_end || ''} aria-label={`${label} break ends`} onChange={(e) => onChange({ ...value, break_end: e.target.value })} /></>}
+    </span>
+  );
+}
+
 function HoursCard({ value, onSave }) {
   const [h, setH] = useState(value?.length ? value : []);
   const enabled = h.length > 0;
@@ -100,7 +115,8 @@ function HoursCard({ value, onSave }) {
               <span className="w-28 text-sm font-semibold">{d.day}</span>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 rounded" checked={d.closed} onChange={(e) => setH(h.map((x, j) => (j === i ? { ...x, closed: e.target.checked } : x)))} />Closed</label>
               {!d.closed && <><input type="time" className="input w-32 py-1.5" value={d.open} aria-label={`${d.day} opens`} onChange={(e) => setH(h.map((x, j) => (j === i ? { ...x, open: e.target.value } : x)))} /><span className="text-ink-400">to</span>
-                <input type="time" className="input w-32 py-1.5" value={d.close} aria-label={`${d.day} closes`} onChange={(e) => setH(h.map((x, j) => (j === i ? { ...x, close: e.target.value } : x)))} /></>}
+                <input type="time" className="input w-32 py-1.5" value={d.close} aria-label={`${d.day} closes`} onChange={(e) => setH(h.map((x, j) => (j === i ? { ...x, close: e.target.value } : x)))} />
+                <BreakInputs label={d.day} value={d} onChange={(v) => setH(h.map((x, j) => (j === i ? v : x)))} /></>}
             </div>
           ))}
         </div>

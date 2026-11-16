@@ -1,16 +1,28 @@
 // First-run seed content for All Uplinks. Everything here is editable from the admin dashboard.
 
+// Store hours from the Google Business Profile (owner-confirmed 2026-11). Friday has a short mid-day break.
 export const STORE_HOURS = [
-  { day: 'Monday', open: '09:00', close: '17:00', closed: false },
-  { day: 'Tuesday', open: '09:00', close: '17:00', closed: false },
-  { day: 'Wednesday', open: '09:00', close: '17:00', closed: false },
-  { day: 'Thursday', open: '09:00', close: '17:00', closed: false },
-  { day: 'Friday', open: '09:00', close: '17:00', closed: false },
-  { day: 'Saturday', open: '10:00', close: '16:00', closed: false },
-  { day: 'Sunday', open: '10:00', close: '16:00', closed: false }
+  { day: 'Monday', open: '09:30', close: '18:30', closed: false },
+  { day: 'Tuesday', open: '09:30', close: '18:30', closed: false },
+  { day: 'Wednesday', open: '09:30', close: '18:30', closed: false },
+  { day: 'Thursday', open: '09:30', close: '18:30', closed: false },
+  { day: 'Friday', open: '10:00', close: '19:00', break_start: '13:45', break_end: '14:15', closed: false },
+  { day: 'Saturday', open: '10:00', close: '18:00', closed: false },
+  { day: 'Sunday', open: '11:00', close: '16:30', closed: false }
 ];
-// Keys are JS weekday numbers (0 = Sunday).
+// Online booking windows, the same as the store hours. Keys are JS weekday numbers (0 = Sunday).
 export const BOOKING_WEEKLY = {
+  0: { open: '11:00', close: '16:30' },
+  1: { open: '09:30', close: '18:30' }, 2: { open: '09:30', close: '18:30' }, 3: { open: '09:30', close: '18:30' },
+  4: { open: '09:30', close: '18:30' }, 5: { open: '10:00', close: '19:00', break_start: '13:45', break_end: '14:15' },
+  6: { open: '10:00', close: '18:00' }
+};
+// The previous defaults, so databases still using them can be moved to the hours above (see db.js).
+export const OLD_STORE_HOURS = [
+  ...['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => ({ day, open: '09:00', close: '17:00', closed: false })),
+  ...['Saturday', 'Sunday'].map((day) => ({ day, open: '10:00', close: '16:00', closed: false }))
+];
+export const OLD_BOOKING_WEEKLY = {
   0: { open: '10:00', close: '16:00' },
   1: { open: '09:00', close: '17:00' }, 2: { open: '09:00', close: '17:00' }, 3: { open: '09:00', close: '17:00' },
   4: { open: '09:00', close: '17:00' }, 5: { open: '09:00', close: '17:00' },

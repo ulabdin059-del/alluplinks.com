@@ -5,6 +5,7 @@ import { cx, fmtTime, money } from '../lib/utils.js';
 import Spinner from '../components/Spinner.jsx';
 import { PageTitle, Badge, STATUS_TONE, useAdminList, toast, Modal } from './kit.jsx';
 import { DAYS } from '../../shared/constants.js';
+import { BreakInputs } from './ContentAdmin.jsx';
 
 const fileUrl = (p) => `/api/admin/files/${p}`;
 
@@ -144,7 +145,8 @@ export function Schedule() {
               <div key={d} className="flex flex-wrap items-center gap-3 py-3">
                 <span className="w-28 text-sm font-semibold">{DAYS[(d + 6) % 7]}</span>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 rounded" checked={!!w} onChange={(e) => setDay(d, e.target.checked ? { open: '10:00', close: '18:00' } : null)} />Open for bookings</label>
-                {w && <><input type="time" className="input w-32 py-1.5" value={w.open} onChange={(e) => setDay(d, { ...w, open: e.target.value })} aria-label="Opens" /><span className="text-ink-400">to</span><input type="time" className="input w-32 py-1.5" value={w.close} onChange={(e) => setDay(d, { ...w, close: e.target.value })} aria-label="Closes" /></>}
+                {w && <><input type="time" className="input w-32 py-1.5" value={w.open} onChange={(e) => setDay(d, { ...w, open: e.target.value })} aria-label="Opens" /><span className="text-ink-400">to</span><input type="time" className="input w-32 py-1.5" value={w.close} onChange={(e) => setDay(d, { ...w, close: e.target.value })} aria-label="Closes" />
+                  <BreakInputs label={DAYS[(d + 6) % 7]} value={w} onChange={(v) => setDay(d, v)} /></>}
               </div>); })}
           </div>
         </div>

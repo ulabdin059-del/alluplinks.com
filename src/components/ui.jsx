@@ -4,6 +4,7 @@ import { ChevronDown, Clock, MapPin, Phone, Navigation, ShieldCheck, Mail } from
 import { cx, imgSrc, imgSet, telHref, mapsDirections, mapsEmbed, mapsSearch } from '../lib/utils.js';
 import { useSite } from '../lib/site.jsx';
 import { DAYS } from '../../shared/constants.js';
+import { dayHoursText, dayBreakText } from '../../shared/hours.js';
 
 export function Img({ k, alt, className, sizes = '(min-width: 1024px) 50vw, 100vw', priority = false, ...rest }) {
   return (
@@ -93,13 +94,12 @@ export function Hours({ compact = false }) {
       {hours.map((h) => (
         <div key={h.day} className={cx('contents', h.day === today && 'font-semibold text-ink')}>
           <dt className={h.day === today ? 'text-ink' : 'text-ink-500'}>{h.day}</dt>
-          <dd className={h.day === today ? 'text-ink' : 'text-ink-600'}>{h.closed ? 'Closed' : `${fmt(h.open)} – ${fmt(h.close)}`}</dd>
+          <dd className={h.day === today ? 'text-ink' : 'text-ink-600'}>{dayHoursText(h)}{dayBreakText(h) && <span className="block text-[0.85em] font-normal text-ink-500">{dayBreakText(h)}</span>}</dd>
         </div>
       ))}
     </dl>
   );
 }
-const fmt = (hm) => { const [h, m] = hm.split(':').map(Number); return `${((h + 11) % 12) + 1}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'a.m.' : 'p.m.'}`; };
 
 export function LocationCard({ withMap = true }) {
   const { business: b } = useSite();
