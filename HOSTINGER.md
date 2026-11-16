@@ -45,7 +45,7 @@ hPanel → **Websites → Add website → Node.js web app → Import Git reposit
 | Node.js version | 22.x |
 | Package manager | npm |
 | Install / build command | `npm run build` (dependencies are installed automatically) |
-| Entry file / start command | `server/index.js` / `npm start` |
+| Entry file / start command | `server.js` / `npm start` (`server/index.js` also works) |
 
 ### Environment variables (hPanel → the app → Environment variables)
 

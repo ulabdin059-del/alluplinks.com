@@ -73,12 +73,12 @@ async function mysqlDriver() {
     batch: (stmts) => (stmts.length ? tx(async (t) => { for (const [sql, ...a] of stmts) await t.run(sql, ...a); }) : undefined),
     exec: async (statements) => { for (const s of statements) await pool.query(s); },
     columns: async (table) => (await pool.query('SELECT COLUMN_NAME name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [table]))[0].map((r) => r.name),
-    // A database-wide lock, so the "is this slot free → book it" check also holds if the host runs several app processes.
-    lock: async (name, fn) => {
+    // A database-wide lock, so "is this slot free → book it" and first-start setup also hold if the host runs several app processes.
+    lock: async (name, fn, waitSeconds = 15) => {
       const conn = await pool.getConnection();
       try {
-        const [[{ ok }]] = await conn.query('SELECT GET_LOCK(?, 15) ok', [name]);
-        if (ok !== 1) throw Object.assign(new Error('The booking system is busy. Please try again.'), { status: 503 });
+        const [[{ ok }]] = await conn.query('SELECT GET_LOCK(?, ?) ok', [name, waitSeconds]);
+        if (ok !== 1) throw Object.assign(new Error('The system is busy. Please try again in a moment.'), { status: 503 });
         try { return await fn(); } finally { await conn.query('SELECT RELEASE_LOCK(?)', [name]).catch(() => {}); }
       } finally { conn.release(); }
     },

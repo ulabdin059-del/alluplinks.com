@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently -k -n api,web \"node --watch --no-warnings server/index.js\" \"vite\"",
     "build": "vite build",
-    "start": "node --no-warnings server/index.js",
+    "start": "node --no-warnings server.js",
     "test": "node --no-warnings tests/e2e.mjs",
     "start:prod": "node --no-warnings --env-file-if-exists=.env server/index.js"
   },
@@ -43,5 +43,6 @@
   "private": true,
   "engines": {
     "node": ">=22.5"
-  }
+  },
+  "main": "server.js"
 }

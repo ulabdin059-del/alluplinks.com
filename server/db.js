@@ -414,13 +414,18 @@ async function addMissingColumns() {
 }
 
 export const ready = (async () => {
-  await (await driver).exec(DB_KIND === 'mysql' ? MYSQL_SCHEMA : SCHEMA);
-  await addMissingColumns();
-  await loadSettings();
-  const seeded = await seedIfEmpty();
-  if (seeded) await loadSettings();
-  else await migrate();
-  await applyDataUpdates();
-  await ensureAdmin();
+  const d = await driver;
+  // One process at a time sets up the database, so two copies of the app starting together (e.g. during a
+  // redeploy) never seed or migrate twice. The second waits, then finds everything done.
+  await d.lock('alluplinks_setup', async () => {
+    await d.exec(DB_KIND === 'mysql' ? MYSQL_SCHEMA : SCHEMA);
+    await addMissingColumns();
+    await loadSettings();
+    const seeded = await seedIfEmpty();
+    if (seeded) await loadSettings();
+    else await migrate();
+    await applyDataUpdates();
+    await ensureAdmin();
+  }, 120);
   console.log(`[db] Ready (${DB_KIND}).`);
 })();
