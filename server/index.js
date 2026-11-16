@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db, j, getSetting, setSetting, exclusive, DATA_DIR, DB_KIND, ready, exportAll, importAll, customerRecordCount } from './db.js';
 import { sendMail, notifyAdmin, emailLayout, EMAIL_KIND } from './email.js';
+import { WHATSAPP_KIND } from './whatsapp.js';
 import { saveFiles, removeFiles, sendPrivateFile, STORAGE_KIND, UPLOADS } from './storage.js';
 import { estimateTradeIn } from '../shared/tradein.js';
 import { renderPage, sitemapXml } from './seo.js';
@@ -188,7 +189,7 @@ const api = express.Router();
 api.get('/health', wrap(async (_req, res) => {
   const t0 = Date.now();
   await db.get('SELECT 1 ok');
-  res.json({ ok: true, database: DB_KIND, db_ms: Date.now() - t0, storage: STORAGE_KIND, email: EMAIL_KIND, time: new Date().toISOString() });
+  res.json({ ok: true, database: DB_KIND, db_ms: Date.now() - t0, storage: STORAGE_KIND, email: EMAIL_KIND, whatsapp: WHATSAPP_KIND, time: new Date().toISOString() });
 }));
 api.get('/site', wrap(async (_req, res) => res.json(await publicSite())));
 api.get('/catalog', wrap(async (_req, res) => res.json({ ...(await catalog()), pricing: getSetting('pricing') })));
@@ -277,7 +278,7 @@ api.post('/bookings', formLimiter, uploader.array('photos', 5), wrap(async (req,
         `Thanks, ${f.name.split(' ')[0]}. We’ve reserved your time at ${b.street}, ${b.city}. If anything changes, call us at ${b.phone_display} and quote your reference.`)
     }),
     notifyAdmin('booking', `New booking ${ref}`, `${f.name} · ${f.brand} ${f.model} · ${repairText} · ${fmtDate(f.date)} ${fmtTime(f.time)}`, '/admin/bookings',
-      emailLayout(`New booking ${ref}`, [...rows, ['Details', f.details || '—'], ['Photos', String(photos.length)]]))
+      emailLayout(`New booking ${ref}`, [...rows, ['Details', f.details || '—'], ['Photos', String(photos.length)]]), f.phone)
   ]);
   res.status(201).json({ ref, date: f.date, time: f.time, date_label: fmtDate(f.date), time_label: fmtTime(f.time), estimate: est, needs_diagnosis: diag, repairs: repairText, email_status: mail.status });
 }));
@@ -321,7 +322,7 @@ api.post('/tradeins', formLimiter, uploader.array('photos', 5), wrap(async (req,
     sendMail({ to: f.email, subject: `Trade-in request received — ${ref} | All Uplinks`,
       html: emailLayout('Your trade-in request is received', rows, 'This is an estimate. Your final offer is confirmed after we physically inspect the device in store. Please bring the device, its charger if you have it, and photo ID.') }),
     notifyAdmin('tradein', `New trade-in ${ref}`, `${f.name} · ${dev.brand} ${dev.model} ${a.storage} · ${money(est.low)}–${money(est.high)}`, '/admin/tradeins',
-      emailLayout(`New trade-in ${ref}`, [...rows, ['Name', f.name], ['Phone', f.phone], ['Email', f.email], ['Notes', f.notes || '—']]))
+      emailLayout(`New trade-in ${ref}`, [...rows, ['Name', f.name], ['Phone', f.phone], ['Email', f.email], ['Notes', f.notes || '—']]), f.phone)
   ]);
   res.status(201).json({ ref, estimate: est, email_status: mail.status });
 }));
@@ -353,7 +354,7 @@ api.post('/inquiries', formLimiter, uploader.array('photos', 3), wrap(async (req
   await db.run('INSERT INTO inquiries(ref,topic,name,email,phone,message,product,photos) VALUES(?,?,?,?,?,?,?,?)',
     ref, f.topic, f.name, f.email, f.phone, f.message, f.product, JSON.stringify(photos));
   await notifyAdmin('inquiry', `New inquiry ${ref}: ${f.topic}`, `${f.name} · ${f.email} · ${f.message.slice(0, 140)}`, '/admin/inquiries',
-    emailLayout(`New inquiry ${ref}`, [['Topic', f.topic], ['Product', f.product || '—'], ['Name', f.name], ['Email', f.email], ['Phone', f.phone || '—'], ['Message', f.message]]));
+    emailLayout(`New inquiry ${ref}`, [['Topic', f.topic], ['Product', f.product || '—'], ['Name', f.name], ['Email', f.email], ['Phone', f.phone || '—'], ['Message', f.message]]), f.phone);
   res.status(201).json({ ref });
 }));
 
@@ -442,7 +443,7 @@ admin.get('/stats', wrap(async (_req, res) => {
     n('SELECT COUNT(*) n FROM notifications WHERE read = 0')
   ]);
   res.json({ bookings_today, bookings_upcoming, bookings_pending, tradeins_new, inquiries_new, reviews_pending, models, price_points, products,
-    today: now.date, upcoming, notifications, unread, smtp: EMAIL_KIND !== 'none', email: EMAIL_KIND, database: DB_KIND, storage: STORAGE_KIND });
+    today: now.date, upcoming, notifications, unread, smtp: EMAIL_KIND !== 'none', email: EMAIL_KIND, whatsapp: WHATSAPP_KIND, database: DB_KIND, storage: STORAGE_KIND });
 }));
 admin.post('/notifications/read', wrap(async (_req, res) => { await db.run('UPDATE notifications SET read = 1'); res.json({ ok: true }); }));
 admin.get('/email-log', wrap(async (_req, res) => res.json(await db.all('SELECT * FROM email_log ORDER BY id DESC LIMIT 100'))));

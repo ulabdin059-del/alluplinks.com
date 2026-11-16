@@ -45,6 +45,7 @@ See `.env.example`. On Render, set them in Dashboard → **alluplinks** → **En
 | `BREVO_API_KEY`, `MAIL_FROM` | for email | Booking / trade-in confirmations. `MAIL_FROM` must be a sender verified in Brevo |
 | `ADMIN_NOTIFY_EMAIL` | recommended | Where new booking / trade-in / inquiry alerts are emailed |
 | `RESEND_API_KEY` or `SMTP_*` | optional | Alternative email providers (SMTP ports are blocked on Render's free tier) |
+| `CALLMEBOT_API_KEY` | optional | WhatsApp alert to the store phone for each new booking, trade-in, inquiry and review (free CallMeBot key; `WHATSAPP_NOTIFY_PHONE` overrides the number). Attempts appear in the Email log |
 | `ALLOW_RESTORE=true` | while moving hosts | Shows Admin → Site settings → **Restore from backup** (only while there are no bookings, trade-ins or inquiries) |
 | `ADMIN_RESET_PASSWORD=true` | one-time | Resets `ADMIN_EMAIL`'s password to `ADMIN_PASSWORD` on start (remove afterwards) |
 | `PORT`, `DATA_DIR`, `CLOUDINARY_FOLDER` | optional | Port (Render sets it), local data folder, Cloudinary folder name |

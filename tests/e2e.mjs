@@ -39,8 +39,14 @@ async function mysqlReset(cfg) {
   for (const { t } of tables) await c.query(`DROP TABLE \`${t}\``);
   await c.end();
 }
+// Stand-in for the CallMeBot WhatsApp API: records every alert the server sends.
+const http = await import('node:http');
+const whatsapp = [];
+const waServer = http.createServer((req, res) => { const u = new URL(req.url, 'http://x'); whatsapp.push(Object.fromEntries(u.searchParams)); res.end(u.searchParams.get('apikey') === 'test-wa-key' ? '<p>Message queued. You will receive it in a few seconds.</p>' : '<p>APIKey is invalid.</p>'); });
+await new Promise((r) => waServer.listen(4330, r));
+const WA_ENV = { CALLMEBOT_API_KEY: 'test-wa-key', CALLMEBOT_URL: 'http://localhost:4330/whatsapp.php' };
 if (MYSQL) { await mysqlReset(MYSQL); console.log(`Testing against MySQL database "${MYSQL.DB_NAME}"`); }
-const server = spawn(process.execPath, ['--no-warnings', 'server/index.js'], { cwd: ROOT, env: { ...process.env, ...MYSQL, PORT, DATA_DIR: DATA, NODE_ENV: 'production', ADMIN_EMAIL: 'owner@example.com', ADMIN_PASSWORD: 'test-password-123' }, stdio: ['ignore', 'pipe', 'pipe'] });
+const server = spawn(process.execPath, ['--no-warnings', 'server/index.js'], { cwd: ROOT, env: { ...process.env, ...MYSQL, ...WA_ENV, PORT, DATA_DIR: DATA, NODE_ENV: 'production', ADMIN_EMAIL: 'owner@example.com', ADMIN_PASSWORD: 'test-password-123' }, stdio: ['ignore', 'pipe', 'pipe'] });
 server.stderr.on('data', (d) => process.stderr.write('[server] ' + d));
 for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/api/site'); break; } catch { await new Promise((r) => setTimeout(r, 200)); } }
 
@@ -336,7 +342,7 @@ await test('Blocked date removes all slots', async () => {
 
 console.log('\nDeployment readiness');
 await test('Health endpoint reports database, storage and email status', async () => {
-  const h = (await json('/api/health')).body; eq(h.ok, true); eq(h.database, DB_UNDER_TEST); eq(h.storage, 'local'); eq(h.email, 'none');
+  const h = (await json('/api/health')).body; eq(h.ok, true); eq(h.database, DB_UNDER_TEST); eq(h.storage, 'local'); eq(h.email, 'none'); eq(h.whatsapp, 'callmebot');
 });
 await test('Backup download contains every table; restore round-trips all records', async () => {
   const r = await adminCtx.request.get(BASE + '/api/admin/backup'); eq(r.status(), 200);
@@ -352,6 +358,23 @@ await test('Backup download contains every table; restore round-trips all record
   const counts = JSON.parse(out.trim().split('\n').pop());
   for (const [t, rows] of Object.entries(backup.tables)) eq(counts[t], rows.length, 'restored ' + t);
   fs.rmSync(RESTORE, { recursive: true, force: true });
+});
+await test('WhatsApp alert sent to the store phone for a new booking (customer phone and admin link included; key never logged)', async () => {
+  for (let i = 0; i < 30 && !whatsapp.some((m) => m.text.includes(bookingRef)); i++) await new Promise((r) => setTimeout(r, 100));
+  const m = whatsapp.find((x) => x.text.includes(bookingRef)); assert(m, 'alert for ' + bookingRef);
+  eq(m.phone, '+19055359503', 'store phone from Site settings'); eq(m.apikey, 'test-wa-key');
+  assert(m.text.startsWith('📅 *New booking'), 'title'); assert(m.text.includes('📞 905-555-0142'), 'customer phone'); assert(m.text.includes('https://alluplinks.com/admin/bookings'), 'admin link');
+  const log = (await adminFetch('/email-log')).body.find((x) => x.recipient === 'WhatsApp …9503' && x.subject.includes(bookingRef));
+  eq(log?.status, 'sent', 'logged as sent'); assert(!JSON.stringify((await adminFetch('/email-log')).body).includes('test-wa-key'), 'API key not in the log');
+  eq((await adminFetch('/stats')).body.whatsapp, 'callmebot');
+});
+await test('WhatsApp: a rejected API key is logged as failed (key hidden) and nothing else breaks', async () => {
+  // Async (not execFileSync) so this process can keep answering as the stand-in WhatsApp API.
+  const { execFile } = await import('node:child_process'); const run = (await import('node:util')).promisify(execFile); const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'au-wa-'));
+  const { stdout: out } = await run(process.execPath, ['--no-warnings', '--input-type=module', '-e', "const m = await import('./server/db.js'); await m.ready; const w = await import('./server/whatsapp.js'); const r = await w.sendWhatsApp('🔔 *Test alert*'); const l = await m.db.get('SELECT * FROM email_log ORDER BY id DESC LIMIT 1'); console.log(JSON.stringify({ r, l }));"],
+    { cwd: ROOT, env: { ...process.env, DATA_DIR: dir, ADMIN_PASSWORD: 'x-unused-123', CALLMEBOT_API_KEY: 'bad-key-777', CALLMEBOT_URL: 'http://localhost:4330/whatsapp.php' }, encoding: 'utf8' });
+  const { r, l } = JSON.parse(out.trim().split('\n').pop()); eq(r.status, 'failed'); eq(l.status, 'failed'); assert(/APIKey is invalid/.test(l.error), l.error); assert(!l.error.includes('bad-key-777'), 'key hidden');
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 await test('Restore is refused unless enabled for a migration, and requires login', async () => {
   eq((await adminFetch('/restore')).body.allowed, false, 'restore off by default');
@@ -728,7 +751,7 @@ await test('Performance: home HTML < 30 KB, JS on first load < 120 KB gzip, imag
   results.push(`      (home load ${loadMs} ms locally)`); await p.close();
 });
 
-await browser.close(); server.kill();
+await browser.close(); server.kill(); waServer.close();
 fs.rmSync(DATA, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

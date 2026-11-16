@@ -5,6 +5,7 @@
 // With none configured, attempts are recorded in email_log as "not_sent" and everything else keeps working.
 import nodemailer from 'nodemailer';
 import { db, getSetting } from './db.js';
+import { sendWhatsApp } from './whatsapp.js';
 
 let transport = null;
 if (process.env.SMTP_HOST) {
@@ -71,8 +72,12 @@ export async function sendMail({ to, subject, html, replyTo }) {
   catch (e) { await log('failed', String(e.message || e)); return { status: 'failed' }; }
 }
 
-export async function notifyAdmin(kind, title, body, link, html) {
+const ICON = { booking: '📅', tradein: '📱', inquiry: '✉️', review: '⭐' };
+// Dashboard notification + email alert + WhatsApp alert. customerPhone (optional) is added to the WhatsApp message.
+export async function notifyAdmin(kind, title, body, link, html, customerPhone) {
   await db.run('INSERT INTO notifications(kind,title,body,link) VALUES(?,?,?,?)', kind, title, body, link);
   const to = process.env.ADMIN_NOTIFY_EMAIL || getSetting('business')?.email;
   if (to) sendMail({ to, subject: `[All Uplinks] ${title}`, html: html || emailLayout(title, [['Details', body]]) }).catch(() => {});
+  const site = (getSetting('business')?.site_url || '').replace(/\/+$/, '');
+  sendWhatsApp([`${ICON[kind] || '🔔'} *${title}*`, body, customerPhone ? `📞 ${customerPhone}` : '', site + link].filter(Boolean).join('\n')).catch(() => {});
 }
