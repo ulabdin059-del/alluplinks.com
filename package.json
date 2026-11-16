@@ -14,7 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@libsql/client": "^0.18.0",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^6.3.0",
     "autoprefixer": "^10.6.2",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
@@ -31,9 +31,9 @@
     "postcss": "^8.5.32",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.6",
+    "react-router-dom": "^7.18.5",
     "tailwindcss": "^3.4.19",
-    "vite": "^5.4.21"
+    "vite": "^8.3.8"
   },
   "devDependencies": {
     "axe-core": "^4.14.0",

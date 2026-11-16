@@ -12,8 +12,8 @@ startReveal();
 function mount() {
   createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      {/* v7_startTransition: route changes keep the current page visible until the next one is ready */}
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      {/* React Router 7 wraps route changes in startTransition: the current page stays visible until the next one is ready */}
+      <BrowserRouter>
         <SiteProvider>
           <App />
         </SiteProvider>
